@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Light color scheme. Dark-mode overrides live in values-night/colors.xml. -->
+    <color name="app_primary">#3F5F90</color>
+    <color name="app_primary_variant">#294873</color>
+    <color name="app_on_primary">#FFFFFF</color>
+    <color name="app_secondary">#006A6A</color>
+    <color name="app_secondary_variant">#004F50</color>
+    <color name="app_on_secondary">#FFFFFF</color>
+    <color name="app_background">#F9F9FF</color>
+    <color name="app_on_background">#1A1C20</color>
+    <color name="app_surface">#F9F9FF</color>
+    <color name="app_on_surface">#1A1C20</color>
+
+    <color name="app_icon_primary">#1A1C20</color>
+    <color name="app_icon_secondary">#5A6069</color>
+    <color name="app_axis_x">#BA1A1A</color>
+    <color name="app_axis_y">#005AC1</color>
+
+    <!-- The Sceneform viewport intentionally stays neutral in both modes. -->
+    <color name="scene_background">#000000</color>
+</resources>

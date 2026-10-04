@@ -1,0 +1,26 @@
+*.iml
+.gradle
+/local.properties
+/.idea/
+/.kotlin/
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Release signing credentials and keystores must never be committed.
+/keystore.properties
+*.jks
+*.keystore
+
+# Downloaded source of the CC-BY caravan model. The generated GLB remains
+# versioned at app/src/main/assets/caravan.glb so regular builds need no Blender.
+/app/blend/large-caravan.zip
+/app/blend/large-caravan/
