@@ -50,6 +50,7 @@ fun LevelerScene(
     val verticalFov = remember {
         mutableFloatStateOf(cameraState.verticalFovDegrees)
     }
+    val panGesture = remember { PanGestureState() }
 
     SceneView(
         modifier = Modifier
@@ -63,9 +64,9 @@ fun LevelerScene(
         cameraNode = cameraNode,
         cameraManipulator = null,
         onGestureListener = null,
-        onTouchEvent = remember(cameraNode, verticalFov) {
+        onTouchEvent = remember(cameraNode, verticalFov, panGesture) {
             { event, hitResult ->
-                cameraNode.handleTouch(event, hitResult, verticalFov)
+                cameraNode.handleTouch(event, hitResult, verticalFov, panGesture)
                 true
             }
         }
@@ -149,45 +150,110 @@ private fun animationFraction(elapsedMillis: Float, durationMillis: Long): Float
 private fun CameraNode.handleTouch(
     event: MotionEvent,
     hitResult: HitResult?,
-    verticalFov: MutableFloatState
+    verticalFov: MutableFloatState,
+    panGesture: PanGestureState
 ) {
-    if (event.actionMasked != MotionEvent.ACTION_MOVE) return
-    when (event.pointerCount) {
-        1 -> move(hitResult, event)
-        2 -> zoom(event, verticalFov)
+    when (event.actionMasked) {
+        MotionEvent.ACTION_DOWN -> panGesture.start(
+            cameraNode = this,
+            hitResult = hitResult,
+            pointerX = event.getX(0),
+            pointerY = event.getY(0)
+        )
+        MotionEvent.ACTION_POINTER_DOWN -> panGesture.clear()
+        MotionEvent.ACTION_MOVE -> when (event.pointerCount) {
+            1 -> move(panGesture, event, verticalFov.floatValue)
+            2 -> zoom(event, verticalFov)
+        }
+        MotionEvent.ACTION_UP,
+        MotionEvent.ACTION_CANCEL -> panGesture.clear()
     }
 }
 
-@Suppress("DEPRECATION")
-private fun CameraNode.move(hitResult: HitResult?, event: MotionEvent) {
-    if (event.historySize == 0 || hitResult?.nodeOrNull == null) return
-
-    val current = event.pointerVector(pointerIndex = 0)
-    val previous = event.pointerVector(pointerIndex = 0, historyPosition = 0)
-    val pointerDistance = current - previous
-    val viewDirection = DomainQuaternion.rotateVector(
-        quaternion.toDomainQuaternion(),
-        DomainVector3.forward()
-    ).normalized()
-    val viewPlane = DomainVector3(
-        1f - viewDirection.x * viewDirection.x,
-        1f - viewDirection.y * viewDirection.y,
-        1f - viewDirection.z * viewDirection.z
+private fun CameraNode.move(
+    panGesture: PanGestureState,
+    event: MotionEvent,
+    verticalFovDegrees: Float
+) {
+    val distanceToPlane = panGesture.distanceToPlane ?: return
+    val cameraRight = panGesture.cameraRight ?: return
+    val cameraUp = panGesture.cameraUp ?: return
+    val viewportHeight = viewport?.height ?: return
+    val pointerMovement = panGesture.moveTo(event.getX(0), event.getY(0)) ?: return
+    val movement = calculatePanMovement(
+        pointerDeltaX = pointerMovement.x,
+        pointerDeltaY = pointerMovement.y,
+        distanceToPlane = distanceToPlane,
+        verticalFovDegrees = verticalFovDegrees,
+        viewportHeightPixels = viewportHeight,
+        cameraRight = cameraRight,
+        cameraUp = cameraUp
     )
 
-    val hitPoint = hitResult.getPoint()
-    val screenPoint = worldToScreenPoint(hitPoint)
-    val ray = screenPointToRay(
-        screenPoint.x + pointerDistance.x,
-        screenPoint.y + pointerDistance.y
-    )
-    val rayPoint = ray.getPoint(hitResult.getDistance()).toDomainVector3()
-    val movement = (hitPoint.toDomainVector3() - rayPoint).componentScale(viewPlane)
-
-    if (movement.isFinite()) {
+    if (movement != null) {
         position = (position.toDomainVector3() + movement).toScenePosition()
     }
 }
+
+private class PanGestureState {
+    var distanceToPlane: Float? = null
+        private set
+    var cameraRight: DomainVector3? = null
+        private set
+    var cameraUp: DomainVector3? = null
+        private set
+    private var pointerX: Float? = null
+    private var pointerY: Float? = null
+
+    fun start(
+        cameraNode: CameraNode,
+        hitResult: HitResult?,
+        pointerX: Float,
+        pointerY: Float
+    ) {
+        val hitPoint = hitResult?.takeIf { it.nodeOrNull != null }?.getPoint()
+        if (hitPoint == null) {
+            clear()
+            return
+        }
+        val rotation = cameraNode.quaternion.toDomainQuaternion()
+        val forward = DomainQuaternion.rotateVector(
+            rotation,
+            DomainVector3.forward()
+        ).normalized()
+        val distance = DomainVector3.dot(
+            DomainVector3.subtract(hitPoint.toDomainVector3(), cameraNode.position.toDomainVector3()),
+            forward
+        )
+        if (!distance.isFinite() || distance <= 0f) {
+            clear()
+            return
+        }
+        distanceToPlane = distance
+        cameraRight = DomainQuaternion.rotateVector(rotation, DomainVector3.right()).normalized()
+        cameraUp = DomainQuaternion.rotateVector(rotation, DomainVector3.up()).normalized()
+        this.pointerX = pointerX
+        this.pointerY = pointerY
+    }
+
+    fun moveTo(pointerX: Float, pointerY: Float): PointerMovement? {
+        val previousX = this.pointerX ?: return null
+        val previousY = this.pointerY ?: return null
+        this.pointerX = pointerX
+        this.pointerY = pointerY
+        return PointerMovement(pointerX - previousX, pointerY - previousY)
+    }
+
+    fun clear() {
+        distanceToPlane = null
+        cameraRight = null
+        cameraUp = null
+        pointerX = null
+        pointerY = null
+    }
+}
+
+private data class PointerMovement(val x: Float, val y: Float)
 
 private fun CameraNode.zoom(event: MotionEvent, verticalFov: MutableFloatState) {
     if (event.historySize == 0) return
@@ -225,11 +291,6 @@ private fun MotionEvent.pointerVector(
         -getHistoricalPressure(pointerIndex, historyPosition)
     )
 }
-
-private fun DomainVector3.componentScale(other: DomainVector3): DomainVector3 =
-    DomainVector3(x * other.x, y * other.y, z * other.z)
-
-private fun DomainVector3.isFinite(): Boolean = x.isFinite() && y.isFinite() && z.isFinite()
 
 private fun DomainVector3.toScenePosition(): Position = Position(x, y, z)
 
