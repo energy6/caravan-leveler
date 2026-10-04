@@ -17,7 +17,7 @@ Thank you for helping improve Caravan Leveler.
 4. Run the verification suite:
 
    ```shell
-   ./gradlew testDebugUnitTest assembleDebug lintDebug
+   ./gradlew test assembleDebug lintDebug
    ```
 
 5. Update documentation and the changelog when user-visible behavior changes.
