@@ -75,6 +75,32 @@ Create a signed release APK with:
 ./gradlew assembleRelease
 ```
 
+## Continuous integration
+
+The GitHub Actions workflow runs unit tests, Android lint, and instrumented
+tests for pull requests, pushes to `main`, and published releases. Pull
+requests produce a debug APK. Pushes to `main` and published releases produce
+a signed release APK. Every workflow APK is retained as a downloadable build
+artifact for 14 days, and an APK built for a published release is also attached
+to that GitHub release.
+
+Signed CI builds require these repository secrets:
+
+- `LEVELER_KEYSTORE_BASE64`: the release keystore encoded as base64.
+- `LEVELER_STORE_PASSWORD`: the keystore password.
+- `LEVELER_KEY_ALIAS`: the signing-key alias.
+- `LEVELER_KEY_PASSWORD`: the signing-key password.
+
+For example, create the value for `LEVELER_KEYSTORE_BASE64` without line
+breaks using:
+
+```shell
+base64 < release-keystore.jks | tr -d '\n'
+```
+
+The signing secrets are used only for pushes to `main` and published releases;
+they are never exposed to pull-request jobs.
+
 ## Basic use
 
 1. Enter the caravan width and the distance from axle to jockey wheel.
