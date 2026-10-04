@@ -41,8 +41,8 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
 
-      - name: Install Android SDK 37
-        run: sdkmanager 'platforms;android-37'
+      - name: Install Android SDK 37.0
+        run: sdkmanager 'platforms;android-37.0'
 
       - name: Verify release tag
         if: github.event_name == 'release'
