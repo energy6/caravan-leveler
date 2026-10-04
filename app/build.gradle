@@ -6,6 +6,26 @@ plugins {
     id 'com.google.dagger.hilt.android'
 }
 
+abstract class RenameFileArtifactTask extends DefaultTask {
+    @org.gradle.api.tasks.InputFile
+    abstract org.gradle.api.file.RegularFileProperty getInputFile()
+
+    @org.gradle.api.tasks.OutputFile
+    abstract org.gradle.api.file.RegularFileProperty getOutputFile()
+
+    @org.gradle.api.tasks.TaskAction
+    void renameArtifact() {
+        def source = inputFile.get().asFile.toPath()
+        def target = outputFile.get().asFile.toPath()
+        java.nio.file.Files.createDirectories(target.parent)
+        java.nio.file.Files.copy(
+            source,
+            target,
+            java.nio.file.StandardCopyOption.REPLACE_EXISTING
+        )
+    }
+}
+
 abstract class VerifyBundlePageAlignmentTask extends DefaultTask {
     @org.gradle.api.tasks.InputFile
     abstract org.gradle.api.file.RegularFileProperty getBundleFile()
@@ -139,6 +159,10 @@ def gitVersion = gitDescription.map { description ->
 def gitVersionName = gitVersion.map { version -> version.name }
 def gitVersionCode = gitVersion.map { version -> version.code }
 
+base {
+    archivesName = gitVersionName.map { version -> "CaravanLeveler-${version}" }
+}
+
 def keystorePropertiesFile = rootProject.file('keystore.properties')
 def keystoreProperties = new Properties()
 if (keystorePropertiesFile.isFile()) {
@@ -225,11 +249,72 @@ configurations {
 }
 
 androidComponents {
-    onVariants(selector().withBuildType('release')) { variant ->
+    onVariants(selector().all()) { variant ->
+        def variantSuffix = variant.buildType == 'release' ? '' : "-${variant.name}"
         variant.outputs.each { output ->
             output.outputFileName.set(
-                output.versionName.map { version -> "CaravanLeveler-${version}.apk" }
+                output.versionName.map { version ->
+                    "CaravanLeveler-${version}${variantSuffix}.apk"
+                }
             )
+        }
+    }
+
+    onVariants(selector().withBuildType('release')) { variant ->
+        def artifactBaseName = gitVersionName.map { version ->
+            "CaravanLeveler-${version}"
+        }
+        def bundleFileName = artifactBaseName.map { name -> "${name}.aab" }
+        def renameBundle = tasks.register(
+            "rename${variant.name.capitalize()}Bundle",
+            RenameFileArtifactTask
+        )
+        variant.artifacts
+            .use(renameBundle)
+            .wiredWithFiles(
+                RenameFileArtifactTask::getInputFile,
+                RenameFileArtifactTask::getOutputFile
+            )
+            .withName(bundleFileName.get())
+            .toTransform(
+                com.android.build.api.artifact.SingleArtifact.BUNDLE.INSTANCE
+            )
+
+        def releaseBundle = variant.artifacts.get(
+            com.android.build.api.artifact.SingleArtifact.BUNDLE.INSTANCE
+        )
+        def releaseApks = layout.buildDirectory.file(
+            artifactBaseName.map { name -> "outputs/apks/release/${name}.apks" }
+        )
+
+        tasks.register('verifyReleaseBundlePageAlignment', VerifyBundlePageAlignmentTask) {
+            group = 'verification'
+            description = 'Verifies that the release AAB requests 16 KB native-library alignment.'
+            dependsOn 'bundleRelease'
+
+            bundleFile = releaseBundle
+            bundletoolClasspath.from(configurations.bundletoolCli)
+        }
+
+        tasks.register('buildReleaseApksFromBundle', BuildApksFromBundleTask) {
+            group = 'build'
+            description = 'Builds a device-installable APK set from the release AAB.'
+            dependsOn 'bundleRelease'
+
+            bundleFile = releaseBundle
+            apksFile = releaseApks
+            bundletoolClasspath.from(configurations.bundletoolCli)
+            aapt2Input = androidComponents.sdkComponents.aapt2
+        }
+
+        tasks.register('installReleaseApksFromBundle', InstallApksFromBundleTask) {
+            group = 'install'
+            description = 'Installs the release AAB-derived APK set on the connected Android device.'
+            dependsOn 'buildReleaseApksFromBundle'
+
+            apksFile = releaseApks
+            adbExecutable = androidComponents.sdkComponents.adb
+            bundletoolClasspath.from(configurations.bundletoolCli)
         }
     }
 }
@@ -280,37 +365,4 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
     androidTestImplementation 'androidx.navigation:navigation-testing:2.10.2'
     androidTestImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0'
-}
-
-def releaseBundle = layout.buildDirectory.file('outputs/bundle/release/app-release.aab')
-def releaseApks = layout.buildDirectory.file('outputs/apks/release/app-release.apks')
-
-tasks.register('verifyReleaseBundlePageAlignment', VerifyBundlePageAlignmentTask) {
-    group = 'verification'
-    description = 'Verifies that the release AAB requests 16 KB native-library alignment.'
-    dependsOn 'bundleRelease'
-
-    bundleFile = releaseBundle
-    bundletoolClasspath.from(configurations.bundletoolCli)
-}
-
-tasks.register('buildReleaseApksFromBundle', BuildApksFromBundleTask) {
-    group = 'build'
-    description = 'Builds a device-installable APK set from the release AAB.'
-    dependsOn 'bundleRelease'
-
-    bundleFile = releaseBundle
-    apksFile = releaseApks
-    bundletoolClasspath.from(configurations.bundletoolCli)
-    aapt2Input = androidComponents.sdkComponents.aapt2
-}
-
-tasks.register('installReleaseApksFromBundle', InstallApksFromBundleTask) {
-    group = 'install'
-    description = 'Installs the release AAB-derived APK set on the connected Android device.'
-    dependsOn 'buildReleaseApksFromBundle'
-
-    apksFile = releaseApks
-    adbExecutable = androidComponents.sdkComponents.adb
-    bundletoolClasspath.from(configurations.bundletoolCli)
 }
