@@ -1,0 +1,74 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="@string/presentation_header">
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="compass"
+            android:summary="@string/compass_summary"
+            android:title="@string/compass"
+            app:icon="@drawable/ic_compass" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/sensor_header">
+        <DropDownPreference
+            android:key="sensor"
+            android:summary=""
+            android:title="@string/select_sensor"
+            app:dialogIcon="@drawable/ic_radio_sensor"
+            app:icon="@drawable/ic_radio_sensor" />
+
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="ble_scan"
+            android:summary="@string/ble_scan_summary"
+            android:title="@string/ble_scan"
+            app:icon="@android:drawable/ic_menu_search" />
+
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="auto_connect"
+            android:summary="@string/auto_connect_summary"
+            android:title="@string/auto_connect"
+            app:icon="@android:drawable/ic_media_play" />
+
+        <DropDownPreference
+            android:defaultValue="X"
+            android:key="sensor_axis_x"
+            android:summary=""
+            android:title="@string/sensor_axis_x"
+            app:dialogIcon="@drawable/ic_xaxis"
+            app:icon="@drawable/ic_xaxis" />
+
+        <DropDownPreference
+            android:defaultValue="Y"
+            android:key="sensor_axis_y"
+            android:summary=""
+            android:title="@string/sensor_axis_y"
+            app:dialogIcon="@drawable/ic_yaxis"
+            app:icon="@drawable/ic_yaxis" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/caravan_header">
+        <de.energy6.caravanleveler.EditNumberPreference
+            android:defaultValue="2.1"
+            android:key="width"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:summary="@string/caravan_width_summary"
+            android:title="@string/caravan_width"
+            app:dialogIcon="@drawable/ic_width"
+            app:icon="@drawable/ic_width" />
+        <de.energy6.caravanleveler.EditNumberPreference
+            android:defaultValue="3.0"
+            android:dialogIcon="@drawable/ic_length"
+            android:icon="@drawable/ic_length"
+            android:key="length"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:summary="@string/caravan_length_summary"
+            android:title="@string/caravan_length" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

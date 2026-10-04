@@ -1,0 +1,61 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+  <path
+      android:pathData="m146.136,126h48a8,8 45,0 1,8 8,8 8,135 0,1 -8,8h-48a8,8 45,0 1,-8 -8,8 8,135 0,1 8,-8z"
+      android:strokeWidth="0"
+      android:fillColor="@color/app_icon_secondary"
+      android:strokeLineCap="square"/>
+  <path
+      android:pathData="m80,133.295c0,0 138.517,0 214.015,0 71.373,0 111.79,106.499 111.79,176 0,16.242 -16,16 -16,16L80,325.295c-8.837,0 -16,-7.163 -16,-16v-160c0,-8.837 7.163,-16 16,-16z"
+      android:strokeWidth="0"
+      android:fillColor="@color/app_icon_primary"
+      android:strokeLineCap="square"/>
+  <path
+      android:pathData="m150.9,174 l144,0a8,8 45,0 1,8 8v48a8,8 135,0 1,-8 8h-144a8,8 45,0 1,-8 -8v-48a8,8 135,0 1,8 -8z"
+      android:strokeWidth="0"
+      android:fillColor="@color/app_icon_secondary"
+      android:strokeLineCap="square"/>
+  <path
+      android:pathData="M224,328m-32,0a32,32 0,1 1,64 0a32,32 0,1 1,-64 0"
+      android:strokeWidth="0"
+      android:fillColor="@color/app_surface"
+      android:strokeLineCap="square"/>
+  <path
+      android:pathData="M224,328m-24,0a24,24 0,1 1,48 0a24,24 0,1 1,-48 0"
+      android:strokeWidth="0"
+      android:fillColor="@color/app_icon_primary"
+      android:strokeLineCap="square"/>
+  <path
+      android:pathData="M392,317h64v8h-64z"
+      android:strokeWidth="0"
+      android:fillColor="@color/app_icon_primary"
+      android:strokeLineCap="square"/>
+  <path
+      android:pathData="M440,344m-8,0a8,8 0,1 1,16 0a8,8 0,1 1,-16 0"
+      android:strokeWidth="0"
+      android:fillColor="@color/app_icon_primary"
+      android:strokeLineCap="square"/>
+  <path
+      android:pathData="M432.481,342.373l0,-32l4,-0l0,32z"
+      android:strokeWidth="0"
+      android:fillColor="@color/app_icon_primary"
+      android:strokeLineCap="square"/>
+  <path
+      android:pathData="M224,372h208v8h-208z"
+      android:strokeWidth="0"
+      android:fillColor="@color/app_icon_primary"
+      android:strokeLineCap="square"/>
+  <path
+      android:pathData="M220,360h8v32h-8z"
+      android:strokeWidth="0"
+      android:fillColor="@color/app_axis_x"
+      android:strokeLineCap="square"/>
+  <path
+      android:pathData="M432,360h8v32h-8z"
+      android:strokeWidth="0"
+      android:fillColor="@color/app_axis_x"
+      android:strokeLineCap="square"/>
+</vector>
