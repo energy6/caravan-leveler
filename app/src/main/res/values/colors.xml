@@ -17,6 +17,6 @@
     <color name="app_axis_x">#BA1A1A</color>
     <color name="app_axis_y">#005AC1</color>
 
-    <!-- The Sceneform viewport intentionally stays neutral in both modes. -->
+    <!-- The SceneView viewport intentionally stays neutral in both modes. -->
     <color name="scene_background">#000000</color>
 </resources>

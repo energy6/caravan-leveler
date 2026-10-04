@@ -151,15 +151,14 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.11.0'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.0'
     implementation platform('androidx.compose:compose-bom:2026.09.00')
+    implementation 'androidx.compose.foundation:foundation'
     implementation 'androidx.compose.ui:ui'
-    implementation 'com.gorisse.thomas.sceneform:sceneform:1.23.0'
-    implementation 'com.google.ar:core:1.56.0'
+    implementation 'io.github.sceneview:sceneview:4.52.0'
     implementation 'androidx.fragment:fragment-ktx:1.9.1'
     implementation 'androidx.preference:preference-ktx:1.2.1'
     implementation 'androidx.navigation:navigation-fragment-ktx:2.10.2'
     implementation 'androidx.navigation:navigation-ui-ktx:2.10.2'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0'
-    implementation 'org.apache.commons:commons-math3:3.6.1'
     implementation 'com.google.dagger:hilt-android:2.60.1'
 
     testImplementation platform('org.junit:junit-bom:6.1.3')
@@ -172,6 +171,7 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     androidTestImplementation 'androidx.test.ext:junit-ktx:1.3.0'
+    androidTestImplementation 'androidx.test:core-ktx:1.7.0'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
     androidTestImplementation 'androidx.navigation:navigation-testing:2.10.2'
     androidTestImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0'

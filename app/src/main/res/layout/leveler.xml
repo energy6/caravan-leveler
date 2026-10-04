@@ -9,7 +9,7 @@
     tools:context=".LevelerFragment"
     tools:ignore="Overdraw">
 
-    <com.google.ar.sceneform.SceneView
+    <androidx.compose.ui.platform.ComposeView
         android:id="@+id/sceneView"
         android:layout_width="0dp"
         android:layout_height="0dp"
