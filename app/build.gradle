@@ -6,6 +6,99 @@ plugins {
     id 'com.google.dagger.hilt.android'
 }
 
+abstract class VerifyBundlePageAlignmentTask extends DefaultTask {
+    @org.gradle.api.tasks.InputFile
+    abstract org.gradle.api.file.RegularFileProperty getBundleFile()
+
+    @org.gradle.api.tasks.Classpath
+    abstract org.gradle.api.file.ConfigurableFileCollection getBundletoolClasspath()
+
+    @javax.inject.Inject
+    abstract org.gradle.process.ExecOperations getExecOperations()
+
+    @org.gradle.api.tasks.TaskAction
+    void verifyAlignment() {
+        def output = new ByteArrayOutputStream()
+        execOperations.javaexec { spec ->
+            spec.classpath(bundletoolClasspath)
+            spec.mainClass.set('com.android.tools.build.bundletool.BundleToolMain')
+            spec.args(
+                'dump',
+                'config',
+                "--bundle=${bundleFile.get().asFile.absolutePath}"
+            )
+            spec.standardOutput = output
+        }.assertNormalExitValue()
+
+        def bundleConfig = output.toString('UTF-8')
+        logger.lifecycle(bundleConfig.trim())
+        if (!bundleConfig.contains('PAGE_ALIGNMENT_16K')) {
+            throw new GradleException(
+                'Release AAB does not request PAGE_ALIGNMENT_16K.'
+            )
+        }
+    }
+}
+
+abstract class BuildApksFromBundleTask extends DefaultTask {
+    @org.gradle.api.tasks.InputFile
+    abstract org.gradle.api.file.RegularFileProperty getBundleFile()
+
+    @org.gradle.api.tasks.OutputFile
+    abstract org.gradle.api.file.RegularFileProperty getApksFile()
+
+    @org.gradle.api.tasks.Classpath
+    abstract org.gradle.api.file.ConfigurableFileCollection getBundletoolClasspath()
+
+    @org.gradle.api.tasks.Nested
+    abstract org.gradle.api.provider.Property<com.android.build.api.variant.Aapt2> getAapt2Input()
+
+    @javax.inject.Inject
+    abstract org.gradle.process.ExecOperations getExecOperations()
+
+    @org.gradle.api.tasks.TaskAction
+    void buildApks() {
+        execOperations.javaexec { spec ->
+            spec.classpath(bundletoolClasspath)
+            spec.mainClass.set('com.android.tools.build.bundletool.BundleToolMain')
+            spec.args(
+                'build-apks',
+                "--bundle=${bundleFile.get().asFile.absolutePath}",
+                "--output=${apksFile.get().asFile.absolutePath}",
+                "--aapt2=${aapt2Input.get().executable.get().asFile.absolutePath}",
+                '--overwrite'
+            )
+        }.assertNormalExitValue()
+    }
+}
+
+abstract class InstallApksFromBundleTask extends DefaultTask {
+    @org.gradle.api.tasks.InputFile
+    abstract org.gradle.api.file.RegularFileProperty getApksFile()
+
+    @org.gradle.api.tasks.InputFile
+    abstract org.gradle.api.file.RegularFileProperty getAdbExecutable()
+
+    @org.gradle.api.tasks.Classpath
+    abstract org.gradle.api.file.ConfigurableFileCollection getBundletoolClasspath()
+
+    @javax.inject.Inject
+    abstract org.gradle.process.ExecOperations getExecOperations()
+
+    @org.gradle.api.tasks.TaskAction
+    void installApks() {
+        execOperations.javaexec { spec ->
+            spec.classpath(bundletoolClasspath)
+            spec.mainClass.set('com.android.tools.build.bundletool.BundleToolMain')
+            spec.args(
+                'install-apks',
+                "--apks=${apksFile.get().asFile.absolutePath}",
+                "--adb=${adbExecutable.get().asFile.absolutePath}"
+            )
+        }.assertNormalExitValue()
+    }
+}
+
 def gitDescription = providers.exec {
     commandLine 'git', 'describe', '--tags', '--always'
 }.standardOutput.asText.map { description -> description.trim() }
@@ -115,11 +208,20 @@ android {
         viewBinding = true
         compose = true
     }
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
     testOptions {
         unitTests.all {
             useJUnitPlatform()
         }
     }
+}
+
+configurations {
+    bundletoolCli
 }
 
 androidComponents {
@@ -141,6 +243,9 @@ kotlin {
 }
 
 dependencies {
+    bundletoolCli 'com.android.tools.build:bundletool:1.18.3'
+    bundletoolCli 'org.jetbrains.kotlin:kotlin-stdlib:2.4.20'
+
     ksp 'com.google.dagger:hilt-compiler:2.60.1'
 
     implementation 'androidx.core:core-ktx:1.19.1'
@@ -175,4 +280,37 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
     androidTestImplementation 'androidx.navigation:navigation-testing:2.10.2'
     androidTestImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0'
+}
+
+def releaseBundle = layout.buildDirectory.file('outputs/bundle/release/app-release.aab')
+def releaseApks = layout.buildDirectory.file('outputs/apks/release/app-release.apks')
+
+tasks.register('verifyReleaseBundlePageAlignment', VerifyBundlePageAlignmentTask) {
+    group = 'verification'
+    description = 'Verifies that the release AAB requests 16 KB native-library alignment.'
+    dependsOn 'bundleRelease'
+
+    bundleFile = releaseBundle
+    bundletoolClasspath.from(configurations.bundletoolCli)
+}
+
+tasks.register('buildReleaseApksFromBundle', BuildApksFromBundleTask) {
+    group = 'build'
+    description = 'Builds a device-installable APK set from the release AAB.'
+    dependsOn 'bundleRelease'
+
+    bundleFile = releaseBundle
+    apksFile = releaseApks
+    bundletoolClasspath.from(configurations.bundletoolCli)
+    aapt2Input = androidComponents.sdkComponents.aapt2
+}
+
+tasks.register('installReleaseApksFromBundle', InstallApksFromBundleTask) {
+    group = 'install'
+    description = 'Installs the release AAB-derived APK set on the connected Android device.'
+    dependsOn 'buildReleaseApksFromBundle'
+
+    apksFile = releaseApks
+    adbExecutable = androidComponents.sdkComponents.adb
+    bundletoolClasspath.from(configurations.bundletoolCli)
 }
