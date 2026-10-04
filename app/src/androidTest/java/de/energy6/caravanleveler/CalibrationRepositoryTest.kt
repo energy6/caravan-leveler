@@ -5,8 +5,8 @@ import android.content.ContextWrapper
 import android.content.SharedPreferences
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.google.ar.sceneform.math.Quaternion
-import com.google.ar.sceneform.math.Vector3
+import de.energy6.caravanleveler.math.Quaternion
+import de.energy6.caravanleveler.math.Vector3
 import de.energy6.caravanleveler.sensors.Sensor
 import org.junit.After
 import org.junit.Assert.assertEquals

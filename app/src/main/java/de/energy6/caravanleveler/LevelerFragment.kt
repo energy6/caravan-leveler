@@ -25,7 +25,8 @@ import dagger.hilt.android.AndroidEntryPoint
 
 import de.energy6.caravanleveler.databinding.DialogCalibrationBinding
 import de.energy6.caravanleveler.databinding.LevelerBinding
-import de.energy6.caravanleveler.math.*
+import de.energy6.caravanleveler.math.Quaternion as DomainQuaternion
+import de.energy6.caravanleveler.math.Vector3 as DomainVector3
 import kotlin.math.abs
 
 @AndroidEntryPoint
@@ -47,7 +48,11 @@ class LevelerFragment : Fragment() {
 
     class Vector3Evaluator : TypeEvaluator<Vector3> {
         override fun evaluate(fraction: Float, startValue: Vector3, endValue: Vector3) : Vector3 =
-            slerp(startValue, endValue, fraction)
+            de.energy6.caravanleveler.math.slerp(
+                startValue.toDomainVector3(),
+                endValue.toDomainVector3(),
+                fraction
+            ).toSceneVector3()
     }
 
     class QuaternionEvaluator : TypeEvaluator<Quaternion> {
@@ -84,14 +89,15 @@ class LevelerFragment : Fragment() {
                         .start()
                 }
                 mBinding.sceneView.scene.camera.apply {
-                    val deg = Vector3.angleBetweenVectors(localPosition, it.position).toLong()
+                    val targetPosition = it.position.toSceneVector3()
+                    val deg = Vector3.angleBetweenVectors(localPosition, targetPosition).toLong()
                     ObjectAnimator
                         .ofObject(
                             this,
                             "localPosition",
                             Vector3Evaluator(),
                             localPosition,
-                            it.position
+                            targetPosition
                         )
                         .setDuration(deg * 10)
                         .start()
@@ -101,7 +107,7 @@ class LevelerFragment : Fragment() {
                             "localRotation",
                             QuaternionEvaluator(),
                             localRotation,
-                            it.direction
+                            it.direction.toSceneQuaternion()
                         )
                         .setDuration(deg * 10)
                         .start()
@@ -121,10 +127,10 @@ class LevelerFragment : Fragment() {
         launchRepeatOnLifecycle(Lifecycle.State.STARTED) {
             mViewModel.caravanState.collect {
                 mCaravan?.apply {
-                    localRotation = it.rotation
-                    localPosition = it.position
+                    localRotation = it.rotation.toSceneQuaternion()
+                    localPosition = it.position.toSceneVector3()
                 }
-                mCompass?.localRotation = it.compass
+                mCompass?.localRotation = it.compass.toSceneQuaternion()
                 with(mFormatter) {
                     mBinding.txtAxis.text =
                         getString(R.string.axis_correction, format(-it.axis), format(it.axis))
@@ -354,7 +360,7 @@ class LevelerFragment : Fragment() {
             val pointer0 = Pair(MotionEvent.PointerCoords(), MotionEvent.PointerCoords())
             getPointerCoords(0, pointer0.first)
             getHistoricalPointerCoords(0, 0, pointer0.second)
-            pointer0.first.toVector3() - pointer0.second.toVector3()
+            pointer0.first.toSceneVector3() - pointer0.second.toSceneVector3()
         }
 
         val viewdir = Quaternion.rotateVector(localRotation, Vector3.forward()).normalized()
@@ -364,7 +370,7 @@ class LevelerFragment : Fragment() {
         val ray = screenPointToRay(target.x, target.y)
         val movement = (hit.point - ray.getPoint(hit.distance)) scl viewpane
 
-        if (!Vector3.equals(movement, NaN3 scl viewpane)) {
+        if (!Vector3.equals(movement, SCENE_NAN_VECTOR scl viewpane)) {
             localPosition += movement
         }
     }
@@ -378,9 +384,9 @@ class LevelerFragment : Fragment() {
             getPointerCoords(1, pointer1.first)
             getHistoricalPointerCoords(0, 0, pointer0.second)
             getHistoricalPointerCoords(1, 0, pointer1.second)
-            val distOld = pointer0.first.toVector3() - pointer1.first.toVector3()
-            val distNew = pointer0.second.toVector3() - pointer1.second.toVector3()
-            val dist = abs(distNew) - abs(distOld)
+            val distOld = pointer0.first.toSceneVector3() - pointer1.first.toSceneVector3()
+            val distNew = pointer0.second.toSceneVector3() - pointer1.second.toSceneVector3()
+            val dist = distNew.length() - distOld.length()
             1.0f + max(min(dist / 100f, 0.1f), -0.1f)
         }
         verticalFovDegrees = max(min(verticalFovDegrees * scale, 160f), 30f)
@@ -397,8 +403,8 @@ class LevelerFragment : Fragment() {
                 mCaravan = Node().apply {
                     renderable = model
                     localScale = Vector3.one() * 0.1f
-                    localRotation = mViewModel.caravanState.value.rotation
-                    localPosition = mViewModel.caravanState.value.position
+                    localRotation = mViewModel.caravanState.value.rotation.toSceneQuaternion()
+                    localPosition = mViewModel.caravanState.value.position.toSceneVector3()
                 }
                 addChild(mCaravan)
             }
@@ -413,7 +419,7 @@ class LevelerFragment : Fragment() {
                     isEnabled = mViewModel.uiState.value.showCompass
                     renderable = model
                     localScale = Vector3.one() * 0.12f
-                    localRotation = mViewModel.caravanState.value.compass
+                    localRotation = mViewModel.caravanState.value.compass.toSceneQuaternion()
                     localPosition = Vector3.back() * 0.5f + Vector3.up() * 0.25  + Vector3.right() * 0.15
                 }
                 addChild(mCompass)
@@ -421,3 +427,24 @@ class LevelerFragment : Fragment() {
     }
 
 }
+
+private val SCENE_NAN_VECTOR = Vector3(Float.NaN, Float.NaN, Float.NaN)
+
+private fun DomainVector3.toSceneVector3(): Vector3 = Vector3(x, y, z)
+
+private fun Vector3.toDomainVector3(): DomainVector3 = DomainVector3(x, y, z)
+
+private fun DomainQuaternion.toSceneQuaternion(): Quaternion = Quaternion(x, y, z, w)
+
+private fun MotionEvent.PointerCoords.toSceneVector3(): Vector3 = Vector3(x, y, -pressure)
+
+private operator fun Vector3.minus(rhs: Vector3): Vector3 = Vector3.subtract(this, rhs)
+
+private operator fun Vector3.plus(rhs: Vector3): Vector3 = Vector3.add(this, rhs)
+
+private operator fun Vector3.times(rhs: Float): Vector3 = scaled(rhs)
+
+private operator fun Vector3.times(rhs: Double): Vector3 = scaled(rhs.toFloat())
+
+private infix fun Vector3.scl(rhs: Vector3): Vector3 =
+    Vector3(x * rhs.x, y * rhs.y, z * rhs.z)

@@ -1,8 +1,6 @@
 package de.energy6.caravanleveler.math
 
 import android.view.MotionEvent
-import com.google.ar.sceneform.math.Quaternion
-import com.google.ar.sceneform.math.Vector3
 import java.lang.Float.max
 import java.lang.Float.min
 import kotlin.math.*

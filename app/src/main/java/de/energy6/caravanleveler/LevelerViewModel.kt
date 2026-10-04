@@ -2,9 +2,9 @@ package de.energy6.caravanleveler
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.ar.sceneform.math.Quaternion
-import com.google.ar.sceneform.math.Vector3
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.energy6.caravanleveler.math.Quaternion
+import de.energy6.caravanleveler.math.Vector3
 import de.energy6.caravanleveler.math.times
 import de.energy6.caravanleveler.math.toOrientation
 import de.energy6.caravanleveler.math.toRadians
