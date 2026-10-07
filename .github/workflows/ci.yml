@@ -69,8 +69,11 @@ jobs:
           ram-size: 2048M
           emulator-options: >-
             -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-            -feature -Vulkan
-          script: ./gradlew connectedDebugAndroidTest
+            -feature -Vulkan -skin 720x1280
+          pre-emulator-launch-script: ./gradlew --stop
+          script: >-
+            ./gradlew --no-daemon -Dorg.gradle.jvmargs=-Xmx1024m
+            -Dorg.gradle.parallel=false connectedDebugAndroidTest
 
       - name: Archive instrumented-test reports
         if: always()
