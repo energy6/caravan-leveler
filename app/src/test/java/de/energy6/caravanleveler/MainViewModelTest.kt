@@ -1,7 +1,7 @@
 package de.energy6.caravanleveler
 
-import com.google.ar.sceneform.math.Quaternion
-import com.google.ar.sceneform.math.Vector3
+import de.energy6.caravanleveler.math.Quaternion
+import de.energy6.caravanleveler.math.Vector3
 import de.energy6.caravanleveler.sensors.SENSOR_BUILTIN_ID
 import de.energy6.caravanleveler.sensors.Sensor
 import kotlinx.coroutines.Dispatchers

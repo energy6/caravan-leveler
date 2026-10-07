@@ -1,13 +1,13 @@
 package de.energy6.caravanleveler
 
 import android.content.Context
-import com.google.ar.sceneform.math.Quaternion
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.energy6.caravanleveler.math.toQuaternion
+import de.energy6.caravanleveler.math.Quaternion
 import de.energy6.caravanleveler.sensors.SENSOR_BUILTIN_ID
 import de.energy6.caravanleveler.sensors.SENSOR_BUILTIN_NAME
 import de.energy6.caravanleveler.sensors.Sensor

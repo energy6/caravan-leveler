@@ -25,19 +25,12 @@ The project directly uses Apache-2.0-licensed components including:
 - Material Components for Android.
 - Dagger and Hilt.
 - Kotlin and kotlinx.coroutines.
-- Apache Commons Math.
-- Sceneform maintained by the SceneView community.
+- SceneView.
+- Google Filament, bundled transitively by SceneView.
 - The Gradle wrapper scripts and supporting Gradle components.
 
 Exact versions are declared in `build.gradle` and `app/build.gradle`. The
 Apache License 2.0 text is included at `LICENSES/Apache-2.0.txt`.
-
-## Google ARCore SDK
-
-The build includes `com.google.ar:core`. Use and redistribution of that SDK are
-subject to the
-[ARCore Additional Terms of Service](https://developers.google.com/ar/develop/terms)
-identified by its published Maven metadata.
 
 ## Transitive dependencies
 

@@ -1,7 +1,7 @@
 package de.energy6.caravanleveler
 
-import com.google.ar.sceneform.math.Quaternion
-import com.google.ar.sceneform.math.Vector3
+import de.energy6.caravanleveler.math.Quaternion
+import de.energy6.caravanleveler.math.Vector3
 import de.energy6.caravanleveler.IsCloseTo.closeTo
 import de.energy6.caravanleveler.math.times
 import org.hamcrest.MatcherAssert.assertThat

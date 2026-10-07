@@ -1,8 +1,122 @@
 plugins {
     id 'com.android.application'
+    id 'org.jetbrains.kotlin.plugin.compose'
     id 'androidx.navigation.safeargs.kotlin'
     id 'com.google.devtools.ksp'
     id 'com.google.dagger.hilt.android'
+}
+
+abstract class RenameFileArtifactTask extends DefaultTask {
+    @org.gradle.api.tasks.InputFile
+    abstract org.gradle.api.file.RegularFileProperty getInputFile()
+
+    @org.gradle.api.tasks.OutputFile
+    abstract org.gradle.api.file.RegularFileProperty getOutputFile()
+
+    @org.gradle.api.tasks.TaskAction
+    void renameArtifact() {
+        def source = inputFile.get().asFile.toPath()
+        def target = outputFile.get().asFile.toPath()
+        java.nio.file.Files.createDirectories(target.parent)
+        java.nio.file.Files.copy(
+            source,
+            target,
+            java.nio.file.StandardCopyOption.REPLACE_EXISTING
+        )
+    }
+}
+
+abstract class VerifyBundlePageAlignmentTask extends DefaultTask {
+    @org.gradle.api.tasks.InputFile
+    abstract org.gradle.api.file.RegularFileProperty getBundleFile()
+
+    @org.gradle.api.tasks.Classpath
+    abstract org.gradle.api.file.ConfigurableFileCollection getBundletoolClasspath()
+
+    @javax.inject.Inject
+    abstract org.gradle.process.ExecOperations getExecOperations()
+
+    @org.gradle.api.tasks.TaskAction
+    void verifyAlignment() {
+        def output = new ByteArrayOutputStream()
+        execOperations.javaexec { spec ->
+            spec.classpath(bundletoolClasspath)
+            spec.mainClass.set('com.android.tools.build.bundletool.BundleToolMain')
+            spec.args(
+                'dump',
+                'config',
+                "--bundle=${bundleFile.get().asFile.absolutePath}"
+            )
+            spec.standardOutput = output
+        }.assertNormalExitValue()
+
+        def bundleConfig = output.toString('UTF-8')
+        logger.lifecycle(bundleConfig.trim())
+        if (!bundleConfig.contains('PAGE_ALIGNMENT_16K')) {
+            throw new GradleException(
+                'Release AAB does not request PAGE_ALIGNMENT_16K.'
+            )
+        }
+    }
+}
+
+abstract class BuildApksFromBundleTask extends DefaultTask {
+    @org.gradle.api.tasks.InputFile
+    abstract org.gradle.api.file.RegularFileProperty getBundleFile()
+
+    @org.gradle.api.tasks.OutputFile
+    abstract org.gradle.api.file.RegularFileProperty getApksFile()
+
+    @org.gradle.api.tasks.Classpath
+    abstract org.gradle.api.file.ConfigurableFileCollection getBundletoolClasspath()
+
+    @org.gradle.api.tasks.Nested
+    abstract org.gradle.api.provider.Property<com.android.build.api.variant.Aapt2> getAapt2Input()
+
+    @javax.inject.Inject
+    abstract org.gradle.process.ExecOperations getExecOperations()
+
+    @org.gradle.api.tasks.TaskAction
+    void buildApks() {
+        execOperations.javaexec { spec ->
+            spec.classpath(bundletoolClasspath)
+            spec.mainClass.set('com.android.tools.build.bundletool.BundleToolMain')
+            spec.args(
+                'build-apks',
+                "--bundle=${bundleFile.get().asFile.absolutePath}",
+                "--output=${apksFile.get().asFile.absolutePath}",
+                "--aapt2=${aapt2Input.get().executable.get().asFile.absolutePath}",
+                '--overwrite'
+            )
+        }.assertNormalExitValue()
+    }
+}
+
+abstract class InstallApksFromBundleTask extends DefaultTask {
+    @org.gradle.api.tasks.InputFile
+    abstract org.gradle.api.file.RegularFileProperty getApksFile()
+
+    @org.gradle.api.tasks.InputFile
+    abstract org.gradle.api.file.RegularFileProperty getAdbExecutable()
+
+    @org.gradle.api.tasks.Classpath
+    abstract org.gradle.api.file.ConfigurableFileCollection getBundletoolClasspath()
+
+    @javax.inject.Inject
+    abstract org.gradle.process.ExecOperations getExecOperations()
+
+    @org.gradle.api.tasks.TaskAction
+    void installApks() {
+        execOperations.javaexec { spec ->
+            spec.classpath(bundletoolClasspath)
+            spec.mainClass.set('com.android.tools.build.bundletool.BundleToolMain')
+            spec.args(
+                'install-apks',
+                "--apks=${apksFile.get().asFile.absolutePath}",
+                "--adb=${adbExecutable.get().asFile.absolutePath}"
+            )
+        }.assertNormalExitValue()
+    }
 }
 
 def gitDescription = providers.exec {
@@ -44,6 +158,10 @@ def gitVersion = gitDescription.map { description ->
 
 def gitVersionName = gitVersion.map { version -> version.name }
 def gitVersionCode = gitVersion.map { version -> version.code }
+
+base {
+    archivesName = gitVersionName.map { version -> "CaravanLeveler-${version}" }
+}
 
 def keystorePropertiesFile = rootProject.file('keystore.properties')
 def keystoreProperties = new Properties()
@@ -100,6 +218,9 @@ android {
         }
     }
     buildTypes {
+        debug {
+            applicationIdSuffix = '.debug'
+        }
         release {
             signingConfig = signingConfigs.release
             minifyEnabled = false
@@ -110,7 +231,15 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    buildFeatures.viewBinding = true
+    buildFeatures {
+        viewBinding = true
+        compose = true
+    }
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
     testOptions {
         unitTests.all {
             useJUnitPlatform()
@@ -118,12 +247,77 @@ android {
     }
 }
 
+configurations {
+    bundletoolCli
+}
+
 androidComponents {
-    onVariants(selector().withBuildType('release')) { variant ->
+    onVariants(selector().all()) { variant ->
+        def variantSuffix = variant.buildType == 'release' ? '' : "-${variant.name}"
         variant.outputs.each { output ->
             output.outputFileName.set(
-                output.versionName.map { version -> "CaravanLeveler-${version}.apk" }
+                output.versionName.map { version ->
+                    "CaravanLeveler-${version}${variantSuffix}.apk"
+                }
             )
+        }
+    }
+
+    onVariants(selector().withBuildType('release')) { variant ->
+        def artifactBaseName = gitVersionName.map { version ->
+            "CaravanLeveler-${version}"
+        }
+        def bundleFileName = artifactBaseName.map { name -> "${name}.aab" }
+        def renameBundle = tasks.register(
+            "rename${variant.name.capitalize()}Bundle",
+            RenameFileArtifactTask
+        )
+        variant.artifacts
+            .use(renameBundle)
+            .wiredWithFiles(
+                RenameFileArtifactTask::getInputFile,
+                RenameFileArtifactTask::getOutputFile
+            )
+            .withName(bundleFileName.get())
+            .toTransform(
+                com.android.build.api.artifact.SingleArtifact.BUNDLE.INSTANCE
+            )
+
+        def releaseBundle = variant.artifacts.get(
+            com.android.build.api.artifact.SingleArtifact.BUNDLE.INSTANCE
+        )
+        def releaseApks = layout.buildDirectory.file(
+            artifactBaseName.map { name -> "outputs/apks/release/${name}.apks" }
+        )
+
+        tasks.register('verifyReleaseBundlePageAlignment', VerifyBundlePageAlignmentTask) {
+            group = 'verification'
+            description = 'Verifies that the release AAB requests 16 KB native-library alignment.'
+            dependsOn 'bundleRelease'
+
+            bundleFile = releaseBundle
+            bundletoolClasspath.from(configurations.bundletoolCli)
+        }
+
+        tasks.register('buildReleaseApksFromBundle', BuildApksFromBundleTask) {
+            group = 'build'
+            description = 'Builds a device-installable APK set from the release AAB.'
+            dependsOn 'bundleRelease'
+
+            bundleFile = releaseBundle
+            apksFile = releaseApks
+            bundletoolClasspath.from(configurations.bundletoolCli)
+            aapt2Input = androidComponents.sdkComponents.aapt2
+        }
+
+        tasks.register('installReleaseApksFromBundle', InstallApksFromBundleTask) {
+            group = 'install'
+            description = 'Installs the release AAB-derived APK set on the connected Android device.'
+            dependsOn 'buildReleaseApksFromBundle'
+
+            apksFile = releaseApks
+            adbExecutable = androidComponents.sdkComponents.adb
+            bundletoolClasspath.from(configurations.bundletoolCli)
         }
     }
 }
@@ -137,6 +331,9 @@ kotlin {
 }
 
 dependencies {
+    bundletoolCli 'com.android.tools.build:bundletool:1.18.3'
+    bundletoolCli 'org.jetbrains.kotlin:kotlin-stdlib:2.4.20'
+
     ksp 'com.google.dagger:hilt-compiler:2.60.1'
 
     implementation 'androidx.core:core-ktx:1.19.1'
@@ -144,15 +341,17 @@ dependencies {
     implementation 'com.google.android.material:material:1.14.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.2.2'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.11.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.11.0'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.0'
-    implementation 'com.gorisse.thomas.sceneform:sceneform:1.23.0'
-    implementation 'com.google.ar:core:1.56.0'
+    implementation platform('androidx.compose:compose-bom:2026.09.00')
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.ui:ui'
+    implementation 'io.github.sceneview:sceneview:4.52.0'
     implementation 'androidx.fragment:fragment-ktx:1.9.1'
     implementation 'androidx.preference:preference-ktx:1.2.1'
     implementation 'androidx.navigation:navigation-fragment-ktx:2.10.2'
     implementation 'androidx.navigation:navigation-ui-ktx:2.10.2'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0'
-    implementation 'org.apache.commons:commons-math3:3.6.1'
     implementation 'com.google.dagger:hilt-android:2.60.1'
 
     testImplementation platform('org.junit:junit-bom:6.1.3')
@@ -165,6 +364,7 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     androidTestImplementation 'androidx.test.ext:junit-ktx:1.3.0'
+    androidTestImplementation 'androidx.test:core-ktx:1.7.0'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
     androidTestImplementation 'androidx.navigation:navigation-testing:2.10.2'
     androidTestImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0'

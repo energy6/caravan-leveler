@@ -6,6 +6,7 @@ buildscript {
     dependencies {
         // AGP 9 provides Kotlin support; this selects the current language/compiler.
         classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.20'
+        classpath 'org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin:2.4.20'
     }
 }
 

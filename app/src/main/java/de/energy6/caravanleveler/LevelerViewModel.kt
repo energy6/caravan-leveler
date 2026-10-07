@@ -2,9 +2,9 @@ package de.energy6.caravanleveler
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.ar.sceneform.math.Quaternion
-import com.google.ar.sceneform.math.Vector3
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.energy6.caravanleveler.math.Quaternion
+import de.energy6.caravanleveler.math.Vector3
 import de.energy6.caravanleveler.math.times
 import de.energy6.caravanleveler.math.toOrientation
 import de.energy6.caravanleveler.math.toRadians
@@ -84,9 +84,9 @@ data class LevelerUiState(
 
 data class LevelerCameraState(
     val rotation: Float = 120.0f,
-    val position: Vector3 = -VIEWPANES[0].first,
-    val direction: Quaternion = Quaternion.lookRotation(VIEWPANES[0].first, VIEWPANES[0].second),
-    val verticalFovDegrees: Float = 90f
+    val position: Vector3 = VIEWPANES[0].position,
+    val direction: Quaternion = VIEWPANES[0].direction,
+    val verticalFovDegrees: Float = VIEWPANES[0].verticalFovDegrees
 )
 
 data class LevelerCaravanState(
@@ -97,10 +97,34 @@ data class LevelerCaravanState(
     val stabilizer: Float = 0f
 )
 
-private val VIEWPANES = arrayListOf(
-    Pair(Vector3.up(), Vector3.back()),
-    Pair(Vector3.left(), Vector3.back()),
-    Pair(Vector3.forward(), Vector3.up())
+private data class CameraViewPane(
+    val forward: Vector3,
+    val up: Vector3,
+    val position: Vector3,
+    val verticalFovDegrees: Float
+) {
+    val direction: Quaternion = Quaternion.lookRotation(forward, up)
+}
+
+private val VIEWPANES = listOf(
+    CameraViewPane(
+        forward = Vector3.up(),
+        up = Vector3.back(),
+        position = Vector3(0f, -1f, 0.080861375f),
+        verticalFovDegrees = 52.16955f
+    ),
+    CameraViewPane(
+        forward = Vector3.left(),
+        up = Vector3.back(),
+        position = Vector3(1f, 0.018092765f, 0.09227779f),
+        verticalFovDegrees = 74.79099f
+    ),
+    CameraViewPane(
+        forward = Vector3.forward(),
+        up = Vector3.up(),
+        position = Vector3(0f, 0f, 1f),
+        verticalFovDegrees = 67.385414f
+    )
 )
 
 private const val CALIBRATION_SAMPLE_COUNT = 20
@@ -331,10 +355,12 @@ class LevelerViewModel @Inject constructor(
     fun rotateCamera() {
         viewPane = (viewPane + 1).mod(VIEWPANES.size)
         mutableCameraState.update {
+            val preset = VIEWPANES[viewPane]
             it.copy(
                 rotation = (viewPane + 1) * 120f,
-                position = -VIEWPANES[viewPane].first,
-                direction = Quaternion.lookRotation(VIEWPANES[viewPane].first, VIEWPANES[viewPane].second)
+                position = preset.position,
+                direction = preset.direction,
+                verticalFovDegrees = preset.verticalFovDegrees
             )
         }
     }

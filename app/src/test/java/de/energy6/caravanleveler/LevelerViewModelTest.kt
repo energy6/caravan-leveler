@@ -1,7 +1,7 @@
 package de.energy6.caravanleveler
 
-import com.google.ar.sceneform.math.Quaternion
-import com.google.ar.sceneform.math.Vector3
+import de.energy6.caravanleveler.math.Quaternion
+import de.energy6.caravanleveler.math.Vector3
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.test.runTest
@@ -105,9 +105,29 @@ class LevelerViewModelTest {
             cameraState.direction,
             equalTo(Quaternion.lookRotation(Vector3.up(), Vector3.back()))
         )
-        assertThat(cameraState.position, equalTo(Vector3.down()))
+        assertThat(cameraState.position, equalTo(Vector3(0f, -1f, 0.080861375f)))
         assertThat(cameraState.rotation, equalTo(120f))
-        assertThat(cameraState.verticalFovDegrees, equalTo(90f))
+        assertThat(cameraState.verticalFovDegrees, equalTo(52.16955f))
+
+        viewModel.rotateCamera()
+        val sideCameraState = viewModel.cameraState.first()
+        assertThat(
+            sideCameraState.direction,
+            equalTo(Quaternion.lookRotation(Vector3.left(), Vector3.back()))
+        )
+        assertThat(sideCameraState.position, equalTo(Vector3(1f, 0.018092765f, 0.09227779f)))
+        assertThat(sideCameraState.rotation, equalTo(240f))
+        assertThat(sideCameraState.verticalFovDegrees, equalTo(74.79099f))
+
+        viewModel.rotateCamera()
+        val topCameraState = viewModel.cameraState.first()
+        assertThat(
+            topCameraState.direction,
+            equalTo(Quaternion.lookRotation(Vector3.forward(), Vector3.up()))
+        )
+        assertThat(topCameraState.position, equalTo(Vector3(0f, 0f, 1f)))
+        assertThat(topCameraState.rotation, equalTo(360f))
+        assertThat(topCameraState.verticalFovDegrees, equalTo(67.385414f))
 
         val caravanState = viewModel.caravanState.first()
         assertThat(caravanState.axis, closeTo(0f, 0.001f))
