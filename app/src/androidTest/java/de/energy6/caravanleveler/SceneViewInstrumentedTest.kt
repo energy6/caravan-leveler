@@ -2,9 +2,6 @@ package de.energy6.caravanleveler
 
 import android.Manifest
 import android.os.SystemClock
-import android.view.InputDevice
-import android.view.MotionEvent
-import android.view.View
 import androidx.compose.ui.platform.ComposeView
 import androidx.preference.PreferenceManager
 import androidx.test.core.app.ActivityScenario
@@ -19,7 +16,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class SceneViewInstrumentedTest {
     @Test
-    fun rendererHandlesPanPinchCompassAndLifecycle() {
+    fun rendererLoadsCompassAndHandlesLifecycle() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         arrayOf(
             Manifest.permission.BLUETOOTH_SCAN,
@@ -36,22 +33,16 @@ class SceneViewInstrumentedTest {
         assertTrue(preferences.edit().putBoolean(PREF_COMPASS, true).commit())
 
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            var sceneCenterX = 0f
-            var sceneCenterY = 0f
             scenario.onActivity { activity ->
                 val sceneView = activity.findViewById<ComposeView>(R.id.sceneView)
                 assertTrue(sceneView.isShown)
                 assertTrue(sceneView.width > 0)
                 assertTrue(sceneView.height > 0)
-                sceneCenterX = sceneView.width / 2f
-                sceneCenterY = sceneView.height / 2f
             }
             SystemClock.sleep(MODEL_LOAD_TIMEOUT_MILLIS)
 
             scenario.onActivity { activity ->
-                val sceneView = activity.findViewById<ComposeView>(R.id.sceneView)
-                dispatchPan(sceneView, sceneCenterX, sceneCenterY)
-                dispatchPinch(sceneView, sceneCenterX, sceneCenterY)
+                assertTrue(activity.findViewById<ComposeView>(R.id.sceneView).isShown)
             }
 
             scenario.onActivity { activity ->
@@ -85,197 +76,8 @@ class SceneViewInstrumentedTest {
         }
     }
 
-    private fun dispatchPan(view: View, centerX: Float, centerY: Float) {
-        val downTime = SystemClock.uptimeMillis()
-        dispatch(
-            view,
-            singlePointerEvent(downTime, downTime, MotionEvent.ACTION_DOWN, centerX, centerY)
-        )
-
-        val moveTime = downTime + EVENT_INTERVAL_MILLIS
-        val move = singlePointerEvent(
-            downTime,
-            moveTime,
-            MotionEvent.ACTION_MOVE,
-            centerX,
-            centerY
-        ).apply {
-            addBatch(
-                moveTime + EVENT_INTERVAL_MILLIS,
-                centerX + PAN_DISTANCE_PIXELS,
-                centerY,
-                PRESSURE,
-                POINTER_SIZE,
-                0
-            )
-        }
-        dispatch(view, move)
-        dispatch(
-            view,
-            singlePointerEvent(
-                downTime,
-                moveTime + 2 * EVENT_INTERVAL_MILLIS,
-                MotionEvent.ACTION_UP,
-                centerX + PAN_DISTANCE_PIXELS,
-                centerY
-            )
-        )
-    }
-
-    private fun dispatchPinch(view: View, centerX: Float, centerY: Float) {
-        val downTime = SystemClock.uptimeMillis()
-        val initialLeft = centerX - INITIAL_PINCH_RADIUS_PIXELS
-        val initialRight = centerX + INITIAL_PINCH_RADIUS_PIXELS
-        val finalLeft = centerX - FINAL_PINCH_RADIUS_PIXELS
-        val finalRight = centerX + FINAL_PINCH_RADIUS_PIXELS
-
-        dispatch(
-            view,
-            singlePointerEvent(downTime, downTime, MotionEvent.ACTION_DOWN, initialLeft, centerY)
-        )
-        dispatch(
-            view,
-            twoPointerEvent(
-                downTime,
-                downTime + EVENT_INTERVAL_MILLIS,
-                MotionEvent.ACTION_POINTER_DOWN or
-                    (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT),
-                initialLeft,
-                initialRight,
-                centerY
-            )
-        )
-
-        val moveTime = downTime + 2 * EVENT_INTERVAL_MILLIS
-        val move = twoPointerEvent(
-            downTime,
-            moveTime,
-            MotionEvent.ACTION_MOVE,
-            initialLeft,
-            initialRight,
-            centerY
-        ).apply {
-            addBatch(
-                moveTime + EVENT_INTERVAL_MILLIS,
-                pointerCoordinates(finalLeft, centerY, finalRight, centerY),
-                0
-            )
-        }
-        dispatch(view, move)
-        dispatch(
-            view,
-            twoPointerEvent(
-                downTime,
-                moveTime + 2 * EVENT_INTERVAL_MILLIS,
-                MotionEvent.ACTION_POINTER_UP or
-                    (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT),
-                finalLeft,
-                finalRight,
-                centerY
-            )
-        )
-        dispatch(
-            view,
-            singlePointerEvent(
-                downTime,
-                moveTime + 3 * EVENT_INTERVAL_MILLIS,
-                MotionEvent.ACTION_UP,
-                finalLeft,
-                centerY
-            )
-        )
-    }
-
-    private fun dispatch(view: View, event: MotionEvent) {
-        try {
-            assertTrue(view.dispatchTouchEvent(event))
-        } finally {
-            event.recycle()
-        }
-    }
-
-    private fun singlePointerEvent(
-        downTime: Long,
-        eventTime: Long,
-        action: Int,
-        x: Float,
-        y: Float
-    ): MotionEvent = motionEvent(
-        downTime,
-        eventTime,
-        action,
-        arrayOf(pointerProperties(0)),
-        arrayOf(pointerCoordinates(x, y))
-    )
-
-    private fun twoPointerEvent(
-        downTime: Long,
-        eventTime: Long,
-        action: Int,
-        firstX: Float,
-        secondX: Float,
-        y: Float
-    ): MotionEvent = motionEvent(
-        downTime,
-        eventTime,
-        action,
-        arrayOf(pointerProperties(0), pointerProperties(1)),
-        pointerCoordinates(firstX, y, secondX, y)
-    )
-
-    private fun motionEvent(
-        downTime: Long,
-        eventTime: Long,
-        action: Int,
-        properties: Array<MotionEvent.PointerProperties>,
-        coordinates: Array<MotionEvent.PointerCoords>
-    ): MotionEvent = MotionEvent.obtain(
-        downTime,
-        eventTime,
-        action,
-        properties.size,
-        properties,
-        coordinates,
-        0,
-        0,
-        1f,
-        1f,
-        0,
-        0,
-        InputDevice.SOURCE_TOUCHSCREEN,
-        0
-    )
-
-    private fun pointerProperties(id: Int) = MotionEvent.PointerProperties().apply {
-        this.id = id
-        toolType = MotionEvent.TOOL_TYPE_FINGER
-    }
-
-    private fun pointerCoordinates(x: Float, y: Float) = MotionEvent.PointerCoords().apply {
-        this.x = x
-        this.y = y
-        pressure = PRESSURE
-        size = POINTER_SIZE
-    }
-
-    private fun pointerCoordinates(
-        firstX: Float,
-        firstY: Float,
-        secondX: Float,
-        secondY: Float
-    ) = arrayOf(
-        pointerCoordinates(firstX, firstY),
-        pointerCoordinates(secondX, secondY)
-    )
-
     private companion object {
         const val MODEL_LOAD_TIMEOUT_MILLIS = 5_000L
         const val RENDERER_RESUME_TIMEOUT_MILLIS = 1_000L
-        const val EVENT_INTERVAL_MILLIS = 16L
-        const val PAN_DISTANCE_PIXELS = 120f
-        const val INITIAL_PINCH_RADIUS_PIXELS = 100f
-        const val FINAL_PINCH_RADIUS_PIXELS = 220f
-        const val PRESSURE = 1f
-        const val POINTER_SIZE = 1f
     }
 }

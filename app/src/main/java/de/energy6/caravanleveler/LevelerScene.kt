@@ -30,9 +30,6 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.tan
 
-private const val MIN_VERTICAL_FOV_DEGREES = 30f
-private const val MAX_VERTICAL_FOV_DEGREES = 160f
-
 private val COMPASS_POSITION = Position(x = 0.15f, y = 0.25f, z = 0.5f)
 
 @Composable
@@ -265,10 +262,10 @@ private fun CameraNode.zoom(event: MotionEvent, verticalFov: MutableFloatState) 
         event.pointerVector(pointerIndex = 0, historyPosition = 0) -
             event.pointerVector(pointerIndex = 1, historyPosition = 0)
     ).length()
-    val scale = 1f + ((previousDistance - currentDistance) / 100f).coerceIn(-0.1f, 0.1f)
-    val newFov = (verticalFov.floatValue * scale).coerceIn(
-        MIN_VERTICAL_FOV_DEGREES,
-        MAX_VERTICAL_FOV_DEGREES
+    val newFov = calculateZoomFov(
+        currentVerticalFovDegrees = verticalFov.floatValue,
+        previousPointerDistance = previousDistance,
+        currentPointerDistance = currentDistance
     )
 
     verticalFov.floatValue = newFov
