@@ -65,14 +65,26 @@ jobs:
         with:
           api-level: 35
           arch: x86_64
-          profile: pixel_7_pro
+          profile: pixel_2
+          ram-size: 2048M
           script: ./gradlew connectedDebugAndroidTest
+
+      - name: Archive instrumented-test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: CaravanLeveler-android-test-reports
+          path: |
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Build debug APK for pull request
         if: github.event_name == 'pull_request'
         run: |
           ./gradlew assembleDebug
-          scripts/verify-16kb-alignment.sh app/build/outputs/apk/debug/app-debug.apk
+          scripts/verify-16kb-alignment.sh app/build/outputs/apk/debug/*.apk
 
       - name: Build signed release artifacts
         if: github.event_name != 'pull_request'
