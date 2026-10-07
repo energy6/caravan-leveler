@@ -1,10 +1,10 @@
 package de.energy6.caravanleveler
 
 import android.Manifest
-import android.graphics.Rect
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.MotionEvent
+import android.view.View
 import androidx.compose.ui.platform.ComposeView
 import androidx.preference.PreferenceManager
 import androidx.test.core.app.ActivityScenario
@@ -36,18 +36,23 @@ class SceneViewInstrumentedTest {
         assertTrue(preferences.edit().putBoolean(PREF_COMPASS, true).commit())
 
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            val sceneBounds = Rect()
+            var sceneCenterX = 0f
+            var sceneCenterY = 0f
             scenario.onActivity { activity ->
                 val sceneView = activity.findViewById<ComposeView>(R.id.sceneView)
                 assertTrue(sceneView.isShown)
-                assertTrue(sceneView.getGlobalVisibleRect(sceneBounds))
+                assertTrue(sceneView.width > 0)
+                assertTrue(sceneView.height > 0)
+                sceneCenterX = sceneView.width / 2f
+                sceneCenterY = sceneView.height / 2f
             }
             SystemClock.sleep(MODEL_LOAD_TIMEOUT_MILLIS)
 
-            val centerX = sceneBounds.exactCenterX()
-            val centerY = sceneBounds.exactCenterY()
-            injectPan(centerX, centerY)
-            injectPinch(centerX, centerY)
+            scenario.onActivity { activity ->
+                val sceneView = activity.findViewById<ComposeView>(R.id.sceneView)
+                dispatchPan(sceneView, sceneCenterX, sceneCenterY)
+                dispatchPinch(sceneView, sceneCenterX, sceneCenterY)
+            }
 
             scenario.onActivity { activity ->
                 val navHost = activity.supportFragmentManager
@@ -80,9 +85,12 @@ class SceneViewInstrumentedTest {
         }
     }
 
-    private fun injectPan(centerX: Float, centerY: Float) {
+    private fun dispatchPan(view: View, centerX: Float, centerY: Float) {
         val downTime = SystemClock.uptimeMillis()
-        inject(singlePointerEvent(downTime, downTime, MotionEvent.ACTION_DOWN, centerX, centerY))
+        dispatch(
+            view,
+            singlePointerEvent(downTime, downTime, MotionEvent.ACTION_DOWN, centerX, centerY)
+        )
 
         val moveTime = downTime + EVENT_INTERVAL_MILLIS
         val move = singlePointerEvent(
@@ -101,8 +109,9 @@ class SceneViewInstrumentedTest {
                 0
             )
         }
-        inject(move)
-        inject(
+        dispatch(view, move)
+        dispatch(
+            view,
             singlePointerEvent(
                 downTime,
                 moveTime + 2 * EVENT_INTERVAL_MILLIS,
@@ -113,15 +122,19 @@ class SceneViewInstrumentedTest {
         )
     }
 
-    private fun injectPinch(centerX: Float, centerY: Float) {
+    private fun dispatchPinch(view: View, centerX: Float, centerY: Float) {
         val downTime = SystemClock.uptimeMillis()
         val initialLeft = centerX - INITIAL_PINCH_RADIUS_PIXELS
         val initialRight = centerX + INITIAL_PINCH_RADIUS_PIXELS
         val finalLeft = centerX - FINAL_PINCH_RADIUS_PIXELS
         val finalRight = centerX + FINAL_PINCH_RADIUS_PIXELS
 
-        inject(singlePointerEvent(downTime, downTime, MotionEvent.ACTION_DOWN, initialLeft, centerY))
-        inject(
+        dispatch(
+            view,
+            singlePointerEvent(downTime, downTime, MotionEvent.ACTION_DOWN, initialLeft, centerY)
+        )
+        dispatch(
+            view,
             twoPointerEvent(
                 downTime,
                 downTime + EVENT_INTERVAL_MILLIS,
@@ -148,8 +161,9 @@ class SceneViewInstrumentedTest {
                 0
             )
         }
-        inject(move)
-        inject(
+        dispatch(view, move)
+        dispatch(
+            view,
             twoPointerEvent(
                 downTime,
                 moveTime + 2 * EVENT_INTERVAL_MILLIS,
@@ -160,7 +174,8 @@ class SceneViewInstrumentedTest {
                 centerY
             )
         )
-        inject(
+        dispatch(
+            view,
             singlePointerEvent(
                 downTime,
                 moveTime + 3 * EVENT_INTERVAL_MILLIS,
@@ -171,12 +186,9 @@ class SceneViewInstrumentedTest {
         )
     }
 
-    private fun inject(event: MotionEvent) {
+    private fun dispatch(view: View, event: MotionEvent) {
         try {
-            assertTrue(
-                InstrumentationRegistry.getInstrumentation().uiAutomation
-                    .injectInputEvent(event, true)
-            )
+            assertTrue(view.dispatchTouchEvent(event))
         } finally {
             event.recycle()
         }
