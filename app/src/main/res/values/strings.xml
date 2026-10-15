@@ -3,6 +3,9 @@
 
     <!-- Preferences Titles -->
     <string name="preferences">Preferences</string>
+    <string name="privacy_policy">Privacy policy</string>
+    <string name="privacy_policy_url" translatable="false">https://github.com/energy6/caravan-leveler/blob/main/PRIVACY.md</string>
+    <string name="browser_unavailable">No browser is available to open the privacy policy.</string>
 
     <string name="presentation_header">Presentation</string>
     <string name="compass">Compass</string>

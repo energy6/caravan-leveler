@@ -2,6 +2,8 @@
 <resources>
     <string name="app_name">Wohnwagen Nivellier</string>
     <string name="preferences">Einstellungen</string>
+    <string name="privacy_policy">Datenschutzerklärung</string>
+    <string name="browser_unavailable">Es ist kein Browser zum Öffnen der Datenschutzerklärung verfügbar.</string>
     <string name="presentation_header">Anzeige</string>
     <string name="compass">Kompass</string>
     <string name="compass_summary">Zeige Kompassnadel</string>

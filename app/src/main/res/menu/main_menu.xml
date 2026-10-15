@@ -12,4 +12,8 @@
         android:id="@+id/open_preferences"
         android:icon="@android:drawable/ic_menu_preferences"
         android:title="@string/preferences" />
+    <item
+        android:id="@+id/open_privacy_policy"
+        android:title="@string/privacy_policy"
+        app:showAsAction="never" />
 </menu>
