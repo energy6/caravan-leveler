@@ -68,6 +68,8 @@
     <string name="calibration_validation_failed">Die Kontrollmessung weicht um %1$.2f° ab. Es wurde keine Kalibrierung gespeichert.</string>
     <string name="restart_calibration">Erneut kalibrieren</string>
     <string name="pro_header">Profi</string>
+    <string name="pro_show">Kalibrierung und Sensor-Snapshots anzeigen</string>
+    <string name="pro_hide">Profi-Einstellungen ausblenden</string>
     <string name="pro_device_calibration">Kalibrierwerte des Geräts</string>
     <string name="pro_vehicle_calibration">Kalibrierwerte des ausgewählten Sensors</string>
     <string name="pro_sensor_calibration_title">Kalibrierung: %1$s</string>

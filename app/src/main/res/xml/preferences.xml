@@ -71,18 +71,26 @@
             android:title="@string/caravan_length" />
     </PreferenceCategory>
 
-    <PreferenceCategory app:title="@string/pro_header">
+    <de.energy6.caravanleveler.ClickablePreferenceCategory
+        android:key="pro_toggle" android:title="@string/pro_header"
+        android:summary="@string/pro_show" android:persistent="false"
+        app:icon="@drawable/ic_expand_more">
         <Preference android:key="pro_device_calibration" android:title="@string/pro_device_calibration"
+            app:isPreferenceVisible="false"
             android:persistent="false" app:icon="@drawable/ic_calibrate" />
         <Preference android:key="pro_vehicle_calibration" android:title="@string/pro_vehicle_calibration"
+            app:isPreferenceVisible="false"
             android:persistent="false" app:icon="@drawable/ic_radio_sensor" />
         <Preference android:key="pro_snapshot_capture" android:title="@string/snapshot_capture"
+            app:isPreferenceVisible="false"
             android:persistent="false" app:icon="@android:drawable/ic_menu_camera" />
         <Preference android:key="pro_snapshot_export" android:title="@string/snapshot_export"
+            app:isPreferenceVisible="false"
             android:summary="@string/snapshot_export_summary" android:persistent="false"
             app:icon="@android:drawable/ic_menu_save" />
         <Preference android:key="pro_snapshot_clear" android:title="@string/snapshot_clear"
+            app:isPreferenceVisible="false"
             android:persistent="false" app:icon="@android:drawable/ic_menu_delete" />
-    </PreferenceCategory>
+    </de.energy6.caravanleveler.ClickablePreferenceCategory>
 
 </PreferenceScreen>

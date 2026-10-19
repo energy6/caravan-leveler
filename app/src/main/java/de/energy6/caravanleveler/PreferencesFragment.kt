@@ -33,6 +33,11 @@ class PreferencesFragment : PreferenceFragmentCompat() {
     private val snapshotCapture by lazy { findPreference<Preference>("pro_snapshot_capture")!! }
     private val snapshotExport by lazy { findPreference<Preference>("pro_snapshot_export")!! }
     private val snapshotClear by lazy { findPreference<Preference>("pro_snapshot_clear")!! }
+    private val proToggle by lazy { findPreference<Preference>("pro_toggle")!! }
+    private val proOptions by lazy {
+        listOf(deviceCalibration, vehicleCalibration, snapshotCapture, snapshotExport, snapshotClear)
+    }
+    private var proExpanded = false
     private val exportSnapshots = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         uri?.let(mViewModel::exportSnapshots)
     }
@@ -84,6 +89,11 @@ class PreferencesFragment : PreferenceFragmentCompat() {
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.preferences, rootKey)
+        setProExpanded(savedInstanceState?.getBoolean("pro_expanded") ?: false)
+        proToggle.setOnPreferenceClickListener {
+            setProExpanded(!proExpanded)
+            true
+        }
 
         mSensor.apply {
             mViewModel.uiState.value.knownSensors.also {
@@ -181,6 +191,18 @@ class PreferencesFragment : PreferenceFragmentCompat() {
                 .setPositiveButton(R.string.snapshot_clear) { _, _ -> mViewModel.clearSnapshots() }.show()
             true
         }
+    }
+
+    private fun setProExpanded(expanded: Boolean) {
+        proExpanded = expanded
+        proOptions.forEach { it.isVisible = expanded }
+        proToggle.setIcon(if (expanded) R.drawable.ic_expand_less else R.drawable.ic_expand_more)
+        proToggle.setSummary(if (expanded) R.string.pro_hide else R.string.pro_show)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean("pro_expanded", proExpanded)
     }
 
     private fun calibrationSummary(value: CalibrationValue?): String = value?.let {

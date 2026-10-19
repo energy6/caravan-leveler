@@ -5,6 +5,7 @@ Notable changes to public Caravan Leveler releases are documented here.
 ## Unreleased — Initial public release
 
 - Add Expert settings to inspect, edit and reset device/selected-sensor calibration.
+- Keep Expert settings collapsed by default; tap the section to show or hide them.
 - Add local sensor snapshots with JSON export for reproducing calibration and
   leveling errors, including settings, timestamps and calculated corrections.
 

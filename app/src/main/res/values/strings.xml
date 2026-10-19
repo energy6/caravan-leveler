@@ -76,6 +76,8 @@
     <string name="calibration_validation_failed">The control measurement differs by %1$.2f°. No calibration was saved.</string>
     <string name="restart_calibration">Restart calibration</string>
     <string name="pro_header">Expert</string>
+    <string name="pro_show">Show calibration and sensor snapshots</string>
+    <string name="pro_hide">Hide expert settings</string>
     <string name="pro_device_calibration">Device calibration values</string>
     <string name="pro_vehicle_calibration">Selected sensor calibration values</string>
     <string name="pro_sensor_calibration_title">Calibration: %1$s</string>

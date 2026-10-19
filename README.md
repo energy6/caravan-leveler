@@ -77,7 +77,8 @@ and changed tilts; checking only the calibration pose would miss the regression.
 
 ## Expert settings and sensor snapshots
 
-The **Expert** section of Settings shows the stored device correction and the
+The **Expert** section of Settings is collapsed by default. Tap it to show or hide
+the calibration and snapshot options. It shows the stored device correction and the
 correction for the selected external sensor and axis mapping. Tap either entry
 to edit the quaternion components (x, y, z, w) or reset the calibration. Decimal
 commas and dots are supported; finite, nonzero quaternions are normalized before

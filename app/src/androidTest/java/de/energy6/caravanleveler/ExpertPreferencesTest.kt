@@ -42,6 +42,18 @@ class ExpertPreferencesTest {
                     val nav = activity.supportFragmentManager.findFragmentById(R.id.fragment) as NavHostFragment
                     preferences = nav.childFragmentManager.primaryNavigationFragment as PreferencesFragment
                     model = ViewModelProvider(preferences)[PreferencesViewModel::class.java]
+                    val options = listOf("pro_device_calibration", "pro_vehicle_calibration",
+                        "pro_snapshot_capture", "pro_snapshot_export", "pro_snapshot_clear")
+                        .map { preferences.findPreference<androidx.preference.Preference>(it)!! }
+                    val toggle = preferences.findPreference<androidx.preference.Preference>("pro_toggle")!!
+                    assertTrue(toggle is androidx.preference.PreferenceCategory)
+                    assertTrue(toggle.isEnabled && toggle.isSelectable)
+                    assertTrue("Expert settings are collapsed by default", options.none { it.isVisible })
+                    toggle.performClick()
+                    assertTrue(options.all { it.isVisible })
+                    toggle.performClick()
+                    assertTrue(options.none { it.isVisible })
+                    toggle.performClick()
                     preferences.findPreference<androidx.preference.Preference>("pro_device_calibration")!!.performClick()
                     preferences.childFragmentManager.executePendingTransactions()
                     val dialog = preferences.childFragmentManager.findFragmentByTag("calibrationValues") as CalibrationValuesDialog
@@ -99,7 +111,7 @@ class ExpertPreferencesTest {
                     image.recycle()
                 }
             } finally {
-                if (::model.isInitialized) {
+                if (::model.isInitialized && scenario.state != androidx.lifecycle.Lifecycle.State.DESTROYED) {
                     scenario.onActivity {
                         model.resetCalibration(CalibrationEditorTarget.Device)
                         previousCalibration.device?.let { value -> model.saveCalibration(CalibrationEditorTarget.Device,
@@ -107,6 +119,14 @@ class ExpertPreferencesTest {
                         previousCalibration.vehicles.forEach { (key, value) ->
                             model.saveCalibration(CalibrationEditorTarget.Vehicle(key),
                                 listOf(value.x, value.y, value.z, value.w).map(Float::toString))
+                        }
+                    }
+                } else {
+                    CalibrationRepository(context).apply {
+                        resetDevice()
+                        previousCalibration.device?.let { saveDevice(it.toQuaternion()) }
+                        previousCalibration.vehicles.forEach { (key, value) ->
+                            saveVehicle(key.sensorId, key.coordinates, value.toQuaternion())
                         }
                     }
                 }
