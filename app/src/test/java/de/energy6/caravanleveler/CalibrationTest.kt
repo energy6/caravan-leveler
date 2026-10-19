@@ -101,12 +101,34 @@ class CalibrationTest {
             )
         )
 
-        val correctedVehicle = CalibrationMath.apply(correction, rawVehicle)
+        val correctedVehicle = CalibrationMath.applyVehicle(correction, rawVehicle)
 
         assertThat(
             CalibrationMath.angularDistanceDegrees(deviceReference, correctedVehicle),
             closeTo(0f, 0.001f)
         )
+    }
+
+    @Test
+    fun `vehicle frame correction preserves future tilt axes as in internal 2022`() {
+        val frameAlignment = Quaternion.axisAngle(Vector3.back(), -95f)
+        val reference = Quaternion.eulerAngles(Vector3(2f, -1f, 15f))
+        val rawVehicle = frameAlignment.inverted() * reference
+        val correction = requireNotNull(
+            CalibrationMath.vehicleCorrection(List(20) { CalibrationPoint(rawVehicle, reference) })
+        )
+
+        listOf(Vector3.zero(), Vector3(4f, -3f, 15f), Vector3(-3f, 2f, 15f)).forEach { angles ->
+            val futureReference = Quaternion.eulerAngles(angles)
+            val futureVehicle = frameAlignment.inverted() * futureReference
+            assertThat(
+                CalibrationMath.angularDistanceDegrees(
+                    futureReference,
+                    CalibrationMath.applyVehicle(correction, futureVehicle)
+                ),
+                closeTo(0f, 0.05f)
+            )
+        }
     }
 
     @Test

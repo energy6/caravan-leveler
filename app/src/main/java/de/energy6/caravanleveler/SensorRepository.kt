@@ -71,14 +71,23 @@ interface ISensorRepository {
 }
 
 @Singleton
-class SensorRepository @Inject constructor(
-    @ApplicationContext context: Context,
+class SensorRepository internal constructor(
+    context: Context,
     private val calibrationRepository: ICalibrationRepository,
-    private val clock: MonotonicClock
+    private val clock: MonotonicClock,
+    private val sensorManager: ISensorManager,
+    private val scope: CoroutineScope
 ) : ISensorRepository {
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val sensorManager = SensorManager(context)
+    @Inject constructor(
+        @ApplicationContext context: Context,
+        calibrationRepository: ICalibrationRepository,
+        clock: MonotonicClock
+    ) : this(
+        context, calibrationRepository, clock, SensorManager(context),
+        CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    )
+
     private val calibrationMotionSensor = CalibrationMotionSensor(context)
     private var sensor: Sensor? = sensorManager.getBuiltinSensor()
     private val referenceSensor = sensorManager.getBuiltinSensor()
@@ -115,7 +124,11 @@ class SensorRepository @Inject constructor(
                     currentStatus.coordinates
                 )
             }
-            reading.copy(q = CalibrationMath.apply(correction, reading.q))
+            reading.copy(q = if (currentStatus.isBuiltin) {
+                CalibrationMath.apply(correction, reading.q)
+            } else {
+                CalibrationMath.applyVehicle(correction, reading.q)
+            })
         }
     }.stateIn(scope, SharingStarted.Eagerly, SensorData())
 

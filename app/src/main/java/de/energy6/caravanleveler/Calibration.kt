@@ -118,11 +118,17 @@ object CalibrationMath {
     }
 
     fun vehicleCorrection(samples: List<CalibrationPoint>): Quaternion? = average(
-        samples.map { sample -> sample.measured.inverted() * sample.reference }
+        samples.map { sample -> sample.reference * sample.measured.inverted() }
     )
 
+    // Device calibration compensates the phone's support plane in local coordinates.
     fun apply(correction: Quaternion?, measured: Quaternion): Quaternion =
         correction?.let { measured * it } ?: measured
+
+    // Vehicle calibration aligns two independent sensor reference frames. As in the
+    // 2022 implementation, this correction acts in world coordinates, from the left.
+    fun applyVehicle(correction: Quaternion?, measured: Quaternion): Quaternion =
+        correction?.let { it * measured } ?: measured
 
     fun measureTurn(previous: Quaternion, current: Quaternion): TurnMeasurement? {
         val delta = normalizedQuaternion(previous.inverted() * current) ?: return null

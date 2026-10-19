@@ -20,6 +20,7 @@ import de.energy6.caravanleveler.sensors.Sensor
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlin.coroutines.resume
@@ -29,12 +30,21 @@ data class SensorDevices(
     val devices: Map<String, String> = mapOf(SENSOR_BUILTIN_ID to SENSOR_BUILTIN_NAME)
 )
 
-class SensorManager(private val mContext: Context) {
+interface ISensorManager {
+    val devices: StateFlow<SensorDevices>
+    fun setOnRequestPermissionsListener(function: () -> Unit)
+    fun startBleScan(): Boolean
+    fun stopBleScan()
+    fun getBuiltinSensor(): Sensor
+    suspend fun getSensor(id: String): Sensor?
+}
+
+class SensorManager(private val mContext: Context) : ISensorManager {
 
     private var requestPermissions : (() -> Unit)? = null
 
     private val mDevices = MutableStateFlow(SensorDevices())
-    val devices = mDevices.asStateFlow()
+    override val devices = mDevices.asStateFlow()
 
     private val mBluetoothAdapter: BluetoothAdapter by lazy {
         val bluetoothManager = mContext.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
@@ -86,12 +96,12 @@ class SensorManager(private val mContext: Context) {
         }
     }
 
-    fun setOnRequestPermissionsListener(function: () -> Unit) {
+    override fun setOnRequestPermissionsListener(function: () -> Unit) {
         requestPermissions = function
     }
 
     @SuppressLint("MissingPermission")
-    fun startBleScan() : Boolean {
+    override fun startBleScan() : Boolean {
         if (checkPermission()) {
             mBleScanner?.startScan(BleSensor.scanFilers, mScanSettings, scanCallback)
                 ?: return false
@@ -101,15 +111,15 @@ class SensorManager(private val mContext: Context) {
     }
 
     @SuppressLint("MissingPermission")
-    fun stopBleScan() {
+    override fun stopBleScan() {
         if (isScanPermissionGranted) {
             mBleScanner?.stopScan(scanCallback)
         }
     }
 
-    fun getBuiltinSensor() : Sensor = BuiltinSensor(mContext)
+    override fun getBuiltinSensor() : Sensor = BuiltinSensor(mContext)
 
-    suspend fun getSensor(id: String) : Sensor? = when {
+    override suspend fun getSensor(id: String) : Sensor? = when {
         (id == SENSOR_BUILTIN_ID) -> getBuiltinSensor()
         (BluetoothAdapter.checkBluetoothAddress(id)) -> createSensorForAddress(id)
         else -> null

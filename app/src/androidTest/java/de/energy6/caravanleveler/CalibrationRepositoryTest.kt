@@ -107,6 +107,27 @@ class CalibrationRepositoryTest {
     }
 
     @Test
+    fun migratingVersion2PreservesDeviceButRemovesIncompatibleVehicleCorrections() {
+        val device = Quaternion.eulerAngles(Vector3(1f, -2f, 0f))
+        CalibrationRepository(context).apply {
+            saveDevice(device)
+            saveVehicle(
+                "AA:BB:CC:DD:EE:01",
+                Sensor.Coordinates(),
+                Quaternion.eulerAngles(Vector3(-1f, 2f, 90f))
+            )
+        }
+        assertTrue(testStore.edit().putInt("schema_version", 2).commit())
+
+        val restored = CalibrationRepository(context).data.value
+
+        assertSameRotation(device, restored.deviceCorrection())
+        assertTrue(restored.vehicles.isEmpty())
+        assertTrue(testStore.all.keys.none { it.startsWith("vehicle") })
+        assertSameRotation(device, CalibrationRepository(context).data.value.deviceCorrection())
+    }
+
+    @Test
     fun incompatibleLegacyValuesAreRemovedSilently() {
         testStore.edit()
             .putBoolean("device.present", true)

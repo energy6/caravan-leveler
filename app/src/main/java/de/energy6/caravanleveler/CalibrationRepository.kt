@@ -81,7 +81,7 @@ class CalibrationRepository @Inject constructor(@ApplicationContext context: Con
     companion object {
         private const val STORE_NAME = "calibration"
         private const val SCHEMA_VERSION_KEY = "schema_version"
-        private const val CURRENT_SCHEMA_VERSION = 2
+        private const val CURRENT_SCHEMA_VERSION = 3
         private const val DEVICE_PREFIX = "device"
         private const val VEHICLE_KEYS = "vehicle_keys"
         private const val VEHICLE_PREFIX = "vehicle"
@@ -90,7 +90,18 @@ class CalibrationRepository @Inject constructor(@ApplicationContext context: Con
     private val store = context.getSharedPreferences(STORE_NAME, Context.MODE_PRIVATE)
 
     init {
-        if (store.getInt(SCHEMA_VERSION_KEY, 0) != CURRENT_SCHEMA_VERSION) {
+        val version = store.getInt(SCHEMA_VERSION_KEY, 0)
+        if (version == 2) {
+            // Version 2 stored vehicle corrections for right multiplication. They cannot
+            // be converted without the original calibration pose; keep the device value.
+            store.edit {
+                store.getStringSet(VEHICLE_KEYS, emptySet()).orEmpty().forEach { key ->
+                    removeCalibration("$VEHICLE_PREFIX.$key")
+                }
+                remove(VEHICLE_KEYS)
+                putInt(SCHEMA_VERSION_KEY, CURRENT_SCHEMA_VERSION)
+            }
+        } else if (version != CURRENT_SCHEMA_VERSION) {
             store.edit {
                 clear()
                 putInt(SCHEMA_VERSION_KEY, CURRENT_SCHEMA_VERSION)

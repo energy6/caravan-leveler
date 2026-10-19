@@ -62,6 +62,19 @@ Run the local verification suite with:
 ./gradlew testDebugUnitTest assembleDebug lintDebug
 ```
 
+Run the BLE leveling integration tests on an Android emulator or test device:
+
+```shell
+./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=de.energy6.caravanleveler.BleLevelingIntegrationTest
+```
+
+These tests simulate WT901BLECL notification payloads and phone readings, exercising
+the production decoder, Android axis remapping, sensor repository, vehicle calibration,
+persistence and displayed correction values without a BLE device. Expected centimetre
+values follow the last 2022 `internal` revision (`bea20cc`, 2022-03-01). Calibration
+is tested on a sloping floor with different phone/sensor headings, followed by level
+and changed tilts; checking only the calibration pose would miss the regression.
+
 ## Release signing
 
 Copy `keystore.properties.example` to `keystore.properties` and configure the

@@ -189,7 +189,7 @@ class CalibrationViewModelTest {
             assertThat(
                 CalibrationMath.angularDistanceDegrees(
                     device,
-                    CalibrationMath.apply(saved.correction, vehicle)
+                    CalibrationMath.applyVehicle(saved.correction, vehicle)
                 ),
                 closeTo(0f, 0.001f)
             )
