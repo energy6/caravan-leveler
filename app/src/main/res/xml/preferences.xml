@@ -71,4 +71,18 @@
             android:title="@string/caravan_length" />
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="@string/pro_header">
+        <Preference android:key="pro_device_calibration" android:title="@string/pro_device_calibration"
+            android:persistent="false" app:icon="@drawable/ic_calibrate" />
+        <Preference android:key="pro_vehicle_calibration" android:title="@string/pro_vehicle_calibration"
+            android:persistent="false" app:icon="@drawable/ic_radio_sensor" />
+        <Preference android:key="pro_snapshot_capture" android:title="@string/snapshot_capture"
+            android:persistent="false" app:icon="@android:drawable/ic_menu_camera" />
+        <Preference android:key="pro_snapshot_export" android:title="@string/snapshot_export"
+            android:summary="@string/snapshot_export_summary" android:persistent="false"
+            app:icon="@android:drawable/ic_menu_save" />
+        <Preference android:key="pro_snapshot_clear" android:title="@string/snapshot_clear"
+            android:persistent="false" app:icon="@android:drawable/ic_menu_delete" />
+    </PreferenceCategory>
+
 </PreferenceScreen>

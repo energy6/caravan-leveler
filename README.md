@@ -75,6 +75,32 @@ values follow the last 2022 `internal` revision (`bea20cc`, 2022-03-01). Calibra
 is tested on a sloping floor with different phone/sensor headings, followed by level
 and changed tilts; checking only the calibration pose would miss the regression.
 
+## Expert settings and sensor snapshots
+
+The **Expert** section of Settings shows the stored device correction and the
+correction for the selected external sensor and axis mapping. Tap either entry
+to edit the quaternion components (x, y, z, w) or reset the calibration. Decimal
+commas and dots are supported; finite, nonzero quaternions are normalized before
+saving. Changing or resetting the device calibration clears dependent vehicle
+calibrations. Resetting one external sensor leaves other sensors and mappings intact.
+
+**Record sensor snapshot** stores one capture locally. Use **Export snapshots (JSON)**
+to choose an export file, or **Delete snapshots** to clear the local collection.
+Snapshots contain sensor identifiers, timestamps, connection state, selected axes,
+raw and calibrated orientations, phone motion readings when available, calibration
+values, dimensions, app version and calculated wheel/jockey-wheel corrections.
+Missing and stale readings are marked explicitly. No BLE device is required to record
+a disconnected state.
+
+The JSON format is versioned (`schemaVersion: 1`). Orientation components are named
+`x`, `y`, `z`, `w`; timestamps use elapsed-realtime nanoseconds, with an ISO UTC capture
+time alongside them. `readings.raw` is the orientation **after** sensor filtering and
+axis remapping and **before** calibration; these are not raw BLE notifications.
+For replay, apply `calibration.device` on the right for the built-in sensor, or
+`calibration.vehicle` on the left for an external sensor, then calculate the centimetre
+corrections with the captured dimensions. `SensorSnapshotRepositoryTest` verifies
+that exported input values reproduce the stored corrections.
+
 ## Release signing
 
 Copy `keystore.properties.example` to `keystore.properties` and configure the

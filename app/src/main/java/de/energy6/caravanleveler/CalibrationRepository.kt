@@ -73,6 +73,8 @@ interface ICalibrationRepository {
 
     fun saveDevice(correction: Quaternion)
     fun saveVehicle(sensorId: String, coordinates: Sensor.Coordinates, correction: Quaternion)
+    fun resetDevice()
+    fun resetVehicle(sensorId: String, coordinates: Sensor.Coordinates)
 }
 
 @Singleton
@@ -155,6 +157,27 @@ class CalibrationRepository @Inject constructor(@ApplicationContext context: Con
             }
             .toMap()
         return CalibrationState(device, vehicles)
+    }
+
+    override fun resetDevice() {
+        store.edit {
+            removeCalibration(DEVICE_PREFIX)
+            store.getStringSet(VEHICLE_KEYS, emptySet()).orEmpty().forEach { key ->
+                removeCalibration("$VEHICLE_PREFIX.$key")
+            }
+            remove(VEHICLE_KEYS)
+        }
+        state.value = CalibrationState()
+    }
+
+    override fun resetVehicle(sensorId: String, coordinates: Sensor.Coordinates) {
+        val key = VehicleCalibrationKey(sensorId, coordinates)
+        store.edit {
+            val keys = store.getStringSet(VEHICLE_KEYS, emptySet()).orEmpty() - key.storageKey
+            putStringSet(VEHICLE_KEYS, keys)
+            removeCalibration("$VEHICLE_PREFIX.${key.storageKey}")
+        }
+        state.update { it.copy(vehicles = it.vehicles - key) }
     }
 
     private fun android.content.SharedPreferences.Editor.putCalibration(

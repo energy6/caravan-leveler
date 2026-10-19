@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/calibrationValues"
+    android:layout_width="match_parent" android:layout_height="wrap_content">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="24dp">
+        <TextView android:id="@+id/calibrationExplanation" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:paddingBottom="12dp" />
+        <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:hint="@string/quaternion_x">
+            <com.google.android.material.textfield.TextInputEditText android:id="@+id/valueX"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:inputType="numberDecimal|numberSigned" android:singleLine="true" android:selectAllOnFocus="true" />
+        </com.google.android.material.textfield.TextInputLayout>
+        <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:hint="@string/quaternion_y">
+            <com.google.android.material.textfield.TextInputEditText android:id="@+id/valueY"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:inputType="numberDecimal|numberSigned" android:singleLine="true" android:selectAllOnFocus="true" />
+        </com.google.android.material.textfield.TextInputLayout>
+        <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:hint="@string/quaternion_z">
+            <com.google.android.material.textfield.TextInputEditText android:id="@+id/valueZ"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:inputType="numberDecimal|numberSigned" android:singleLine="true" android:selectAllOnFocus="true" />
+        </com.google.android.material.textfield.TextInputLayout>
+        <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:hint="@string/quaternion_w">
+            <com.google.android.material.textfield.TextInputEditText android:id="@+id/valueW"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:inputType="numberDecimal|numberSigned" android:singleLine="true" android:selectAllOnFocus="true"
+                android:imeOptions="actionDone" />
+        </com.google.android.material.textfield.TextInputLayout>
+        <TextView android:id="@+id/calibrationInputError" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="@string/calibration_input_invalid"
+            android:textColor="?attr/colorError" android:visibility="gone" android:accessibilityLiveRegion="polite" />
+    </LinearLayout>
+</ScrollView>

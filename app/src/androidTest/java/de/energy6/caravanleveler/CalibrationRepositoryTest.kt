@@ -128,6 +128,40 @@ class CalibrationRepositoryTest {
     }
 
     @Test
+    fun resettingOneVehiclePreservesDeviceAndOtherSensorAndAxisCalibrations() {
+        val first = Sensor.Coordinates()
+        val otherAxes = Sensor.Coordinates(Sensor.Axis.MINUS_X, Sensor.Axis.Z)
+        val value = Quaternion.eulerAngles(Vector3(1f, -2f, 3f))
+        val repository = CalibrationRepository(context)
+        repository.saveDevice(value)
+        repository.saveVehicle("AA:BB:CC:DD:EE:01", first, value)
+        repository.saveVehicle("AA:BB:CC:DD:EE:01", otherAxes, value)
+        repository.saveVehicle("AA:BB:CC:DD:EE:02", first, value)
+
+        repository.resetVehicle("AA:BB:CC:DD:EE:01", first)
+
+        val restored = CalibrationRepository(context).data.value
+        assertSameRotation(value, restored.deviceCorrection())
+        assertNull(restored.vehicleCorrection("AA:BB:CC:DD:EE:01", first))
+        assertSameRotation(value, restored.vehicleCorrection("AA:BB:CC:DD:EE:01", otherAxes))
+        assertSameRotation(value, restored.vehicleCorrection("AA:BB:CC:DD:EE:02", first))
+        assertEquals(restored, repository.data.value)
+    }
+
+    @Test
+    fun resettingDeviceRemovesAllDependentCalibrationsPersistently() {
+        val repository = CalibrationRepository(context)
+        val value = Quaternion.eulerAngles(Vector3(1f, -2f, 3f))
+        repository.saveDevice(value)
+        repository.saveVehicle("AA:BB:CC:DD:EE:01", Sensor.Coordinates(), value)
+
+        repository.resetDevice()
+
+        assertEquals(CalibrationState(), repository.data.value)
+        assertEquals(CalibrationState(), CalibrationRepository(context).data.value)
+    }
+
+    @Test
     fun incompatibleLegacyValuesAreRemovedSilently() {
         testStore.edit()
             .putBoolean("device.present", true)

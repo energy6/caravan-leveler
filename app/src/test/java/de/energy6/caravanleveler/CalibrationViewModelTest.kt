@@ -474,6 +474,13 @@ class CalibrationViewModelTest {
         val deviceSaves = mutableListOf<Quaternion>()
         val vehicleSaves = mutableListOf<VehicleSave>()
 
+        override fun resetDevice() { mutableData.value = CalibrationState() }
+        override fun resetVehicle(sensorId: String, coordinates: Sensor.Coordinates) {
+            mutableData.value = mutableData.value.copy(
+                vehicles = mutableData.value.vehicles - VehicleCalibrationKey(sensorId, coordinates)
+            )
+        }
+
         override fun saveDevice(correction: Quaternion) {
             deviceSaves += correction
             mutableData.value = CalibrationState(device = CalibrationValue.from(correction))

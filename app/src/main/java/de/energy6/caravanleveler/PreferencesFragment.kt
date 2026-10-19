@@ -3,6 +3,7 @@ package de.energy6.caravanleveler
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.preference.*
@@ -12,6 +13,9 @@ import de.energy6.caravanleveler.sensors.SENSOR_BUILTIN_ID
 import de.energy6.caravanleveler.sensors.Sensor
 import java.text.DecimalFormat
 import java.text.NumberFormat
+import java.time.Instant
+import java.util.Locale
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class PreferencesFragment : PreferenceFragmentCompat() {
@@ -24,6 +28,14 @@ class PreferencesFragment : PreferenceFragmentCompat() {
     private val mAxisY by lazy { preferenceManager.findPreference<DropDownPreference>("sensor_axis_y")!! }
     private val mWidth by lazy { preferenceManager.findPreference<EditNumberPreference>("width") !! }
     private val mLength by lazy { preferenceManager.findPreference<EditNumberPreference>("length")!! }
+    private val deviceCalibration by lazy { findPreference<Preference>("pro_device_calibration")!! }
+    private val vehicleCalibration by lazy { findPreference<Preference>("pro_vehicle_calibration")!! }
+    private val snapshotCapture by lazy { findPreference<Preference>("pro_snapshot_capture")!! }
+    private val snapshotExport by lazy { findPreference<Preference>("pro_snapshot_export")!! }
+    private val snapshotClear by lazy { findPreference<Preference>("pro_snapshot_clear")!! }
+    private val exportSnapshots = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        uri?.let(mViewModel::exportSnapshots)
+    }
 
     private val mFormatter by lazy {
         (NumberFormat.getNumberInstance() as DecimalFormat).apply {
@@ -41,7 +53,7 @@ class PreferencesFragment : PreferenceFragmentCompat() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         launchRepeatOnLifecycle(Lifecycle.State.STARTED) {
-            mViewModel.uiState.collect { data ->
+            launch { mViewModel.uiState.collect { data ->
                 data.knownSensors.also {
                     mSensor.entryValues = it.keys.toTypedArray()
                     mSensor.entries = it.localizedSensorNames()
@@ -50,7 +62,23 @@ class PreferencesFragment : PreferenceFragmentCompat() {
                 mAutoConnect.isChecked = data.autoConnect
                 mAxisX.value = data.coordinates.xaxis.name
                 mAxisY.value = data.coordinates.yaxis.name
-            }
+                deviceCalibration.summary = calibrationSummary(data.deviceCalibration)
+                val builtin = data.selectedSensorId == SENSOR_BUILTIN_ID
+                vehicleCalibration.isEnabled = !builtin
+                vehicleCalibration.title = getString(R.string.pro_sensor_calibration_title,
+                    if (builtin) getString(R.string.builtin) else data.knownSensors[data.selectedSensorId] ?: data.selectedSensorId)
+                vehicleCalibration.summary = if (builtin) getString(R.string.pro_builtin_selected) else
+                    getString(R.string.pro_sensor_calibration_summary,
+                        getString(data.coordinates.xaxis.label), getString(data.coordinates.yaxis.label),
+                        calibrationSummary(data.vehicleCalibration))
+                snapshotCapture.summary = getString(R.string.snapshot_capture_summary, data.snapshotCount)
+                snapshotCapture.isEnabled = !data.snapshotBusy
+                snapshotExport.isEnabled = !data.snapshotBusy && data.snapshotCount > 0
+                snapshotClear.isEnabled = !data.snapshotBusy && data.snapshotCount > 0
+            } }
+            launch { mViewModel.messages.collect { message ->
+                Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
+            } }
         }
     }
 
@@ -123,9 +151,55 @@ class PreferencesFragment : PreferenceFragmentCompat() {
 
         mWidth.configureDimension(R.string.caravan_width_summary, R.string.caravan_width_invalid)
         mLength.configureDimension(R.string.caravan_length_summary, R.string.caravan_length_invalid)
+
+        deviceCalibration.icon = deviceCalibration.icon?.mutate()?.apply {
+            setTint(requireContext().getColor(R.color.app_icon_primary))
+        }
+        deviceCalibration.setOnPreferenceClickListener {
+            showCalibrationEditor(CalibrationEditorTarget.Device, getString(R.string.pro_device_calibration),
+                mViewModel.uiState.value.deviceCalibration)
+            true
+        }
+        vehicleCalibration.setOnPreferenceClickListener {
+            val state = mViewModel.uiState.value
+            if (state.selectedSensorId != SENSOR_BUILTIN_ID) {
+                showCalibrationEditor(CalibrationEditorTarget.Vehicle(
+                    VehicleCalibrationKey(state.selectedSensorId, state.coordinates)),
+                    vehicleCalibration.title.toString(), state.vehicleCalibration)
+            }
+            true
+        }
+        snapshotCapture.setOnPreferenceClickListener { mViewModel.captureSnapshot(); true }
+        snapshotExport.setOnPreferenceClickListener {
+            exportSnapshots.launch("caravan-leveler-${Instant.now().toString().replace(':', '-')}.json")
+            true
+        }
+        snapshotClear.setOnPreferenceClickListener {
+            MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.snapshot_clear)
+                .setMessage(R.string.snapshot_clear_confirm)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.snapshot_clear) { _, _ -> mViewModel.clearSnapshots() }.show()
+            true
+        }
+    }
+
+    private fun calibrationSummary(value: CalibrationValue?): String = value?.let {
+        String.format(Locale.ROOT, "x=%.7f · y=%.7f\nz=%.7f · w=%.7f", it.x, it.y, it.z, it.w)
+    } ?: getString(R.string.pro_calibration_absent)
+
+    private fun showCalibrationEditor(target: CalibrationEditorTarget, title: String, value: CalibrationValue?) {
+        if (childFragmentManager.findFragmentByTag("calibrationValues") == null) {
+            CalibrationValuesDialog.create(target, title, value).show(childFragmentManager, "calibrationValues")
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        mViewModel.monitorDevice(true)
     }
 
     override fun onPause() {
+        mViewModel.monitorDevice(false)
         super.onPause()
         mViewModel.bleScan(false)
     }

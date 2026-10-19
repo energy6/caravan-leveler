@@ -6,9 +6,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.energy6.caravanleveler.math.Quaternion
 import de.energy6.caravanleveler.math.Vector3
 import de.energy6.caravanleveler.math.times
-import de.energy6.caravanleveler.math.toOrientation
-import de.energy6.caravanleveler.math.toRadians
-import de.energy6.caravanleveler.math.unaryMinus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -19,9 +16,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.math.abs
-import kotlin.math.sin
-import kotlin.math.sqrt
 
 enum class CalibrationTarget {
     DEVICE,
@@ -190,39 +184,11 @@ class LevelerViewModel @Inject constructor(
         data class Failure(val error: CalibrationError) : PoseResult
     }
 
-    private fun calcLevel(angle: Float, distance: Float) = sin(angle.toRadians()) * distance
-
     init {
         viewModelScope.launch {
             sensorRepository.data.collect { data ->
                 if (!data.isValid) return@collect
-                val corrected = data.q
-                val headingLength = sqrt(
-                    corrected.w * corrected.w + corrected.z * corrected.z
-                )
-                val compass = if (headingLength > 1e-6f) {
-                    Quaternion(
-                        0f,
-                        0f,
-                        -corrected.z / headingLength,
-                        corrected.w / headingLength
-                    )
-                } else {
-                    Quaternion.identity()
-                }
-                val rotation = compass * corrected
-                val orientation = corrected.toOrientation()
-                val axis = calcLevel(orientation.y, width * 100.0f)
-                val stabilizer = -calcLevel(orientation.x, length * 100.0f)
-                val position = Vector3.back() *
-                    abs(sin(rotation.toOrientation().y.toRadians())) * 0.16f
-                mutableCaravanState.value = LevelerCaravanState(
-                    rotation,
-                    position,
-                    compass,
-                    axis,
-                    stabilizer
-                )
+                mutableCaravanState.value = calculateLeveling(data.q, width, length)
             }
         }
         viewModelScope.launch {
